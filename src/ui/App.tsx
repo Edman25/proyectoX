@@ -12,6 +12,8 @@ import { Pads } from './Pads'
 import { PAD_KEYS, PADS_PER_BANK, padDown, padUp } from './pads'
 import { isPreviewPlaying, previewFrom, stopAll } from './preview'
 import { SliceEditor } from './SliceEditor'
+import { Arrangement } from './Arrangement'
+import { ChopStrip } from './ChopStrip'
 import { ControllerPanel } from './ControllerPanel'
 import { TrackView } from './TrackView'
 import { Tracks } from './Tracks'
@@ -218,16 +220,24 @@ export function App() {
           <button className={view === 'sample' ? 'active' : ''} onClick={() => setUi({ view: 'sample' })}>
             Sample{asset ? `: ${asset.name}` : ''}
           </button>
-          <button className={view === 'track' ? 'active' : ''} disabled={!track} onClick={() => setUi({ view: 'track' })}>
-            Pista{track ? `: ${track.name}` : ''}
+          <button className={view === 'track' ? 'active' : ''} disabled={!track || track.kind === 'audio'} onClick={() => setUi({ view: 'track' })}>
+            Pista{track && track.kind !== 'audio' ? `: ${track.name}` : ''}
+          </button>
+          <button className={view === 'arrange' ? 'active' : ''} onClick={() => setUi({ view: 'arrange' })}>
+            Arreglo
           </button>
         </nav>
         {!ready ? (
           <div className="editor empty">Abriendo…</div>
+        ) : view === 'arrange' ? (
+          <Arrangement />
         ) : view === 'track' && track && track.kind !== 'audio' ? (
           <TrackView key={track.id} track={track} />
         ) : asset ? (
-          <SliceEditor asset={asset} />
+          <>
+            <SliceEditor asset={asset} />
+            <ChopStrip />
+          </>
         ) : (
           <button className="editor empty dropzone" onClick={() => fileRef.current?.click()}>
             Arrastra audios aquí o haz clic para importar

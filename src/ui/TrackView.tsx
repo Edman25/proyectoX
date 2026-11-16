@@ -2,9 +2,10 @@
  * Vista de una pista: encabezado del patrón (largo, rejilla, swing,
  * cuantizar) y el editor (grilla de pasos o piano roll).
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { gridTicks, ticksPerBar, type NoteId } from '../model'
 import { useApp, useProject } from '../state/store'
+import { newPattern, renamePattern, selectPattern } from '../state/arrangeActions'
 import { clearPattern, quantizeTrack, setNotesVelocity, setPatternBars, setSwing } from '../state/trackActions'
 import { Fader } from './Fader'
 import { NumberField } from './NumberField'
@@ -24,6 +25,10 @@ const RESOLUTIONS = [
 export function TrackView({ track }: { track: NoteTrack }) {
   const pattern = useProject((p) => (track.activePatternId ? p.patterns[track.activePatternId] : undefined))
   const ts = useProject((p) => p.timeSignature)
+  // Seleccionar el objeto estable y filtrar aparte (filtrar dentro del selector crea un arreglo nuevo en cada lectura).
+  const allPatterns = useProject((p) => p.patterns)
+  const patterns = useMemo(() => Object.values(allPatterns).filter((pt) => pt.trackId === track.id), [allPatterns, track.id])
+  const [renaming, setRenaming] = useState(false)
   const stepTicks = useApp((s) => s.ui.stepTicks)
   const editorPref = useApp((s) => s.ui.trackEditor)
   // El Sampler es cromático: solo piano roll.
@@ -55,6 +60,42 @@ export function TrackView({ track }: { track: NoteTrack }) {
           </button>
         </nav>
         )}
+        <label className="field" title="Patrones de la pista (para armar intro, verso, coro… en el arreglo)">
+          <span>Patrón</span>
+          {renaming ? (
+            <input
+              type="text"
+              autoFocus
+              defaultValue={pattern.name}
+              style={{ width: 120 }}
+              onBlur={(e) => {
+                renamePattern(pattern.id, e.target.value)
+                setRenaming(false)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+                if (e.key === 'Escape') setRenaming(false)
+              }}
+            />
+          ) : (
+            <select value={pattern.id} onChange={(e) => selectPattern(track.id, e.target.value as typeof pattern.id)} onDoubleClick={() => setRenaming(true)}>
+              {patterns.map((pt) => (
+                <option key={pt.id} value={pt.id}>
+                  {pt.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </label>
+        <button className="mini" title="Patrón nuevo vacío" onClick={() => newPattern(track.id)}>
+          +
+        </button>
+        <button className="mini" title="Duplicar este patrón" onClick={() => newPattern(track.id, pattern.id)}>
+          ⧉
+        </button>
+        <button className="mini" title="Renombrar" onClick={() => setRenaming(true)}>
+          ✎
+        </button>
         <div className="spacer" />
         <label className="field">
           <span>Largo</span>

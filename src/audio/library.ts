@@ -102,3 +102,28 @@ export async function ensureLoaded(assets: readonly SampleAsset[]): Promise<Asse
   )
   return missing
 }
+
+/** Guarda y registra audio generado en la app (p. ej. al consolidar). */
+export async function createAsset(
+  name: string,
+  channels: Float32Array<ArrayBuffer>[],
+  sampleRate: number,
+  origin: SampleAsset['origin'],
+): Promise<SampleAsset> {
+  const id = newId<AssetId>()
+  const storageKey = `audio:${id}`
+  await dbPut('audio', storageKey, { sampleRate, channels } satisfies StoredAudio)
+  register(id, toBuffer({ sampleRate, channels }))
+  return {
+    id,
+    name,
+    storageKey,
+    sampleRate,
+    channels: channels.length,
+    frames: channels[0]?.length ?? 0,
+    bpm: null,
+    rootNote: null,
+    origin,
+    slices: [],
+  }
+}

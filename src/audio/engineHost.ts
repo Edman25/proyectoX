@@ -148,11 +148,17 @@ export function liveNoteOff(target: NoteTarget, timeStamp = performance.now()): 
   getHost().router.localNoteOff(target, timeStamp)
 }
 
+/** En modo canción el play arranca donde marca la regla; en modo patrón, al inicio. */
+function playStartTick(): number {
+  const { history, ui } = useApp.getState()
+  return history.present.transportMode === 'song' ? ui.songStartTick : 0
+}
+
 export function togglePlay(): void {
   resumeAudio()
   const { engine, session } = getHost()
   if (engine.isPlaying) session.stop()
-  else session.play(0)
+  else session.play(playStartTick())
 }
 
 /**
@@ -174,7 +180,7 @@ export function startOrStopRecording(): void {
       })
     }
   }
-  session.toggleRecord(0)
+  session.toggleRecord(playStartTick())
 }
 
 // --- MIDI ---------------------------------------------------------------

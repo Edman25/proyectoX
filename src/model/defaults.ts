@@ -8,6 +8,7 @@ import {
   type Pattern,
   type PlaybackOptions,
   type Project,
+  type AudioTrack,
   type SampleRef,
   type SamplerTrack,
   type SlicerTrack,
@@ -79,6 +80,18 @@ export function createSlicerTrack(name: string, assetId: AssetId | null): Slicer
     baseNote: DEFAULT_PAD_BASE_NOTE,
     triggerMode: 'oneShot',
     monophonic: false,
+  }
+}
+
+export function createAudioTrack(name: string): AudioTrack {
+  return {
+    id: newId<TrackId>(),
+    kind: 'audio',
+    name,
+    color: '#6fd19a',
+    mixer: { ...DEFAULT_MIXER },
+    armed: false,
+    activePatternId: null,
   }
 }
 

@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { connectMidi, startOrStopRecording, togglePlay, useLive } from '../audio/engineHost'
 import { PPQ, gridTicks, ticksPerBar } from '../model'
 import { useProject } from '../state/store'
+import { setTransportMode } from '../state/arrangeActions'
 import { setBpm, setCountIn, setMetronome, setNoteRepeat, setRecordMode } from '../state/trackActions'
 import { NumberField } from './NumberField'
 import { usePlayhead, usePlaying } from './transport'
@@ -54,6 +55,7 @@ export function Transport({ onOpenController }: { onOpenController: () => void }
   const bpm = useProject((p) => p.bpm)
   const metronome = useProject((p) => p.metronome)
   const recordMode = useProject((p) => p.recordMode)
+  const mode = useProject((p) => p.transportMode)
   const noteRepeat = useProject((p) => p.noteRepeat)
   const ts = useProject((p) => p.timeSignature)
   const barTicks = ticksPerBar(ts)
@@ -81,6 +83,10 @@ export function Transport({ onOpenController }: { onOpenController: () => void }
       >
         ●
       </button>
+      <select className="mini" value={mode} title="Patrón: cada pista loopea su patrón · Canción: suena el arreglo" onChange={(e) => setTransportMode(e.target.value as 'pattern' | 'song')}>
+        <option value="pattern">Patrón</option>
+        <option value="song">Canción</option>
+      </select>
       <span className={`position ${position?.startsWith('-') ? 'count' : ''}`}>{position ?? '1.1'}</span>
       <NumberField label="BPM" value={bpm} min={20} max={300} step={0.5} width={64} onCommit={setBpm} />
       <label className="check" title="Metrónomo">
@@ -99,9 +105,10 @@ export function Transport({ onOpenController }: { onOpenController: () => void }
       </label>
       <label className="field" title="Overdub: suma a lo que hay. Reemplazo: borra lo anterior de las pistas armadas por donde pasa.">
         <span>Grabar</span>
-        <select value={recordMode === 'linear' ? 'overdub' : recordMode} onChange={(e) => setRecordMode(e.target.value as 'overdub' | 'replace')}>
+        <select value={recordMode} onChange={(e) => setRecordMode(e.target.value as 'overdub' | 'replace' | 'linear')}>
           <option value="overdub">overdub</option>
           <option value="replace">reemplazo</option>
+          {mode === 'song' && <option value="linear">lineal (clips nuevos)</option>}
         </select>
       </label>
       <label className="check" title="Note repeat: mantener un pad lo repite en la rejilla">

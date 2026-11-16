@@ -16,6 +16,7 @@ import {
   updateSlicePlayback,
 } from '../state/actions'
 import { useApp, useProject } from '../state/store'
+import { addToStrip, consolidateSlices } from '../state/arrangeActions'
 import { addSamplerFromSelection, addSlicer, selectTrack, sendSlicesToPads } from '../state/trackActions'
 import { NumberField } from './NumberField'
 import { Waveform } from './Waveform'
@@ -44,6 +45,7 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
   const [bars, setBars] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
   const selectedTrackId = useApp((s) => s.ui.selectedTrackId)
+  const project = useProject((p) => p)
   const rack = useProject((p) => {
     const sel = selectedTrackId ? p.tracks[selectedTrackId] : undefined
     if (sel?.kind === 'drumRack') return sel
@@ -200,6 +202,28 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
             onClick={() => addSamplerFromSelection()}
           >
             → Sampler
+          </button>
+        </div>
+        <div className="tool-group">
+          <button
+            disabled={selectedSlices.length === 0}
+            title="Agregar los slices seleccionados a la tira de chops (en orden de selección)"
+            onClick={() => addToStrip(selected.map((sliceId) => ({ kind: 'slice', assetId: asset.id, sliceId })))}
+          >
+            + Tira
+          </button>
+          <button
+            disabled={selectedSlices.length < 2}
+            title="Unir los slices seleccionados (aunque no sean contiguos), en orden de selección, en un sample nuevo"
+            onClick={async () => {
+              const n = Object.values(project.assets).filter((a) => a.origin.kind === 'consolidated').length
+              await consolidateSlices(
+                selected.map((sliceId) => ({ kind: 'slice', assetId: asset.id, sliceId })),
+                `${asset.name} chop ${n + 1}`,
+              )
+            }}
+          >
+            Unir en sample nuevo
           </button>
         </div>
         {message && <span className="toast">{message}</span>}

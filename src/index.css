@@ -856,3 +856,188 @@ button.icon.visible {
 .roll-head.root .num {
   color: var(--accent);
 }
+
+/* Fase 6: arreglo y tira de chops */
+.arrangement {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.arr {
+  display: flex;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  outline: none;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.arr:focus-visible {
+  border-color: var(--accent);
+}
+.arr-heads {
+  flex: none;
+  border-right: 1px solid var(--border);
+}
+.arr-ruler-head {
+  border-bottom: 1px solid var(--border);
+}
+.arr-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--bg);
+  border-radius: 0;
+  font-size: 12px;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.arr-head.active {
+  background: var(--accent-dim);
+}
+.arr-head .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.arr-scroll {
+  flex: 1;
+  overflow-x: auto;
+}
+.arr-ruler {
+  position: relative;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+.bar-num {
+  position: absolute;
+  top: 4px;
+  padding-left: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  border-left: 1px solid #3a3a44;
+  height: 16px;
+}
+.loop-region {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #ffffff14;
+  border-left: 2px solid var(--muted);
+  border-right: 2px solid var(--muted);
+  pointer-events: none;
+}
+.loop-region.on {
+  background: #f0a63a33;
+  border-color: var(--accent);
+}
+.start-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid var(--playhead);
+  transform: translateX(-7px);
+  pointer-events: none;
+}
+.arr-body {
+  position: relative;
+  background-color: #17171b;
+  background-image: linear-gradient(to right, #3a3a44 1px, transparent 1px), linear-gradient(to right, #23232a 1px, transparent 1px),
+    linear-gradient(to bottom, #2a2a31 1px, transparent 1px);
+}
+.arr-lane {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.arr-clip {
+  position: absolute;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--clip) 55%, #17171b);
+  border: 1px solid color-mix(in srgb, var(--clip) 80%, #000);
+  overflow: hidden;
+  cursor: grab;
+  font-size: 11px;
+  color: #111;
+}
+.arr-clip.audio {
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--clip) 45%, #17171b) 0 3px, color-mix(in srgb, var(--clip) 60%, #17171b) 3px 6px);
+}
+.arr-clip.selected {
+  outline: 2px solid var(--playhead);
+  outline-offset: -1px;
+}
+.arr-clip::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+}
+.clip-name {
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  right: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.clip-repeat {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed #0007;
+}
+.clip-tag {
+  position: absolute;
+  right: 8px;
+  bottom: 3px;
+  font-size: 10px;
+}
+.chop-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: chop;
+}
+.strip li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px;
+}
+.strip li.missing {
+  opacity: 0.5;
+}
+.strip .chip {
+  border: none;
+  background: none;
+  font-size: 12px;
+}

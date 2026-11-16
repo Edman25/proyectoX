@@ -1,6 +1,6 @@
 # Plan — App de chops, samples y secuenciación
 
-Estado: fases 0–5 listas. Siguiente: fase 6 (arreglo y consolidación).
+Estado: fases 0–6 listas. Siguiente: fase 7 (mixer, export y proyectos).
 
 ## Objetivo
 

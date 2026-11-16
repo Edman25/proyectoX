@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { TrackId } from '../model'
+import { addAudioTrack } from '../state/arrangeActions'
 import { useApp, useProject } from '../state/store'
 import { addDrumRack, addSamplerFromSelection, addSlicer, removeTrack, renameTrack, selectTrack, setMixer, toggleArm } from '../state/trackActions'
 import { Fader } from './Fader'
@@ -10,6 +11,7 @@ export function Tracks() {
   const order = useProject((p) => p.trackOrder)
   const tracks = useProject((p) => p.tracks)
   const ui = useApp((s) => s.ui)
+  const setUi = useApp((s) => s.setUi)
   const asset = useProject((p) => (ui.selectedAssetId ? p.assets[ui.selectedAssetId] : undefined))
   const [editing, setEditing] = useState<TrackId | null>(null)
 
@@ -33,14 +35,17 @@ export function Tracks() {
         >
           + Sampler
         </button>
+        <button title="Pista de audio: clips de samples en el arreglo, ajustados al BPM" onClick={() => addAudioTrack()}>
+          + Audio
+        </button>
       </div>
       <ul>
         {order.map((id) => {
           const t = tracks[id]
           if (!t) return null
-          const active = ui.view === 'track' && ui.selectedTrackId === id
+          const active = ui.view !== 'sample' && ui.selectedTrackId === id
           return (
-            <li key={id} className={active ? 'active' : ''} onClick={() => selectTrack(id)}>
+            <li key={id} className={active ? 'active' : ''} onClick={() => (t.kind === 'audio' ? setUi({ selectedTrackId: id, view: 'arrange' }) : selectTrack(id))}>
               <div className="track-row">
                 <span className="dot" style={{ background: t.color }} />
                 {editing === id ? (

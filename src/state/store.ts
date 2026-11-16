@@ -4,7 +4,7 @@
  */
 import type { Draft } from 'immer'
 import { create } from 'zustand'
-import { createEmptyProject, type AssetId, type Project, type SliceId, type TrackId } from '../model'
+import { createEmptyProject, type AssetId, type ClipId, type Project, type SampleRef, type SliceId, type TrackId } from '../model'
 import { commit, createHistory, redo, reset, undo, type History } from './history'
 
 export interface UiState {
@@ -16,12 +16,17 @@ export interface UiState {
   /** Banco de pads visible (0 = pads 1–16). */
   padBank: number
   selectedTrackId: TrackId | null
-  /** Qué se ve al centro: el editor de slices o el secuenciador de la pista. */
-  view: 'sample' | 'track'
+  /** Qué se ve al centro: el editor de slices, el de la pista o el arreglo. */
+  view: 'sample' | 'track' | 'arrange'
   /** Resolución de la grilla de pasos, en ticks. */
   stepTicks: number
   /** Editor de la pista: grilla de pasos o piano roll. */
   trackEditor: 'steps' | 'roll'
+  /** Desde dónde arranca el play en modo canción. */
+  songStartTick: number
+  selectedClipIds: ClipId[]
+  /** Tira de chops: porciones en el orden en que se van a unir. */
+  chopStrip: Extract<SampleRef, { kind: 'slice' }>[]
 }
 
 const INITIAL_UI: UiState = {
@@ -33,6 +38,9 @@ const INITIAL_UI: UiState = {
   view: 'sample',
   stepTicks: 240,
   trackEditor: 'steps',
+  songStartTick: 0,
+  selectedClipIds: [],
+  chopStrip: [],
 }
 
 interface AppState {
