@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { TrackId } from '../model'
 import { useApp, useProject } from '../state/store'
-import { addDrumRack, addSlicer, removeTrack, renameTrack, selectTrack, setMixer } from '../state/trackActions'
+import { addDrumRack, addSlicer, removeTrack, renameTrack, selectTrack, setMixer, toggleArm } from '../state/trackActions'
 import { Fader } from './Fader'
 
 const KIND_LABEL = { drumRack: 'Drum Rack', slicer: 'Slicer', sampler: 'Sampler', audio: 'Audio' } as const
@@ -55,6 +55,18 @@ export function Tracks() {
                   <span className="name" onDoubleClick={() => setEditing(id)} title={`${t.name} · ${KIND_LABEL[t.kind]}`}>
                     {t.name}
                   </span>
+                )}
+                {t.kind !== 'audio' && (
+                  <button
+                    className={`ms arm ${t.armed ? 'on' : ''}`}
+                    title="Armar para grabar"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleArm(id)
+                    }}
+                  >
+                    ●
+                  </button>
                 )}
                 <button
                   className={`ms ${t.mixer.mute ? 'on mute' : ''}`}

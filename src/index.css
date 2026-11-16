@@ -577,3 +577,232 @@ button.mini.on {
 .pad.empty {
   opacity: 0.7;
 }
+
+/* Fase 3 */
+.app {
+  grid-template-columns: 250px minmax(0, 1fr) 360px;
+}
+.pads-col {
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+@media (max-width: 1180px) {
+  .app {
+    grid-template-columns: 230px minmax(0, 1fr);
+  }
+  .pads-col {
+    grid-column: 2;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+.topbar {
+  flex-wrap: wrap;
+}
+.shortcuts {
+  white-space: nowrap;
+}
+.transport {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+button.rec {
+  width: 32px;
+  color: var(--danger);
+}
+button.rec.active {
+  background: var(--danger);
+  color: #111;
+  border-color: var(--danger);
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+.position.count {
+  color: var(--danger);
+}
+button.midi {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #444;
+  flex: none;
+}
+.led.on {
+  background: #3d7a4a;
+}
+.led.blink {
+  background: #6dff8f;
+}
+button.ms.arm.on {
+  background: var(--danger);
+  color: #111;
+}
+.segmented {
+  display: inline-flex;
+}
+.segmented button {
+  border-radius: 0;
+}
+.segmented button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.segmented button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+/* Piano roll */
+.roll {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  outline: none;
+}
+.roll:focus-visible {
+  border-color: var(--accent);
+}
+.roll-heads {
+  flex: none;
+  border-right: 1px solid var(--border);
+}
+.roll-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--bg);
+  padding: 0 6px;
+  font-size: 11px;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.roll-head .num {
+  font-weight: 600;
+  min-width: 16px;
+}
+.roll-scroll {
+  overflow-x: auto;
+  flex: 1;
+}
+.roll-body {
+  position: relative;
+  background-image: linear-gradient(to right, #3a3a44 1px, transparent 1px), linear-gradient(to right, #26262d 1px, transparent 1px),
+    linear-gradient(to bottom, #1d1d23 1px, transparent 1px);
+  background-color: #17171b;
+}
+.roll-note {
+  position: absolute;
+  background: var(--accent);
+  border-radius: 3px;
+  cursor: grab;
+  border: 1px solid #0006;
+}
+.roll-note::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+}
+.roll-note.recorded {
+  border: 1px dashed #111;
+}
+.roll-note.selected {
+  background: var(--playhead);
+}
+.roll-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--playhead);
+  pointer-events: none;
+}
+
+/* Panel del controlador */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #000a;
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+.modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal header {
+  display: flex;
+  align-items: center;
+}
+.device {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.device h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.device-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.device .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.action-label {
+  min-width: 170px;
+}
+.learn-hint {
+  margin: 0;
+  color: var(--accent);
+}
+button.icon.visible {
+  visibility: visible;
+}
+.pad-targets {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pad-targets td {
+  padding: 3px 8px 3px 0;
+}
+.pad-targets select {
+  max-width: 340px;
+}

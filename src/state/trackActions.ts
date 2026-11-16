@@ -2,6 +2,8 @@
  * Acciones de la fase 2: pistas, pads, patrones y transporte. Cada una es un
  * paso de deshacer.
  */
+import type { Draft } from 'immer'
+import { quantizePattern } from '../engine'
 import {
   MAX_BPM,
   MIN_BPM,
@@ -11,7 +13,11 @@ import {
   newId,
   ticksPerBar,
   type AssetId,
+  type ControlId,
+  type ControllerProfileId,
   type MixerChannel,
+  type NoteTarget,
+  type Project,
   type NoteId,
   type SampleRef,
   type SliceId,
@@ -177,5 +183,124 @@ export function setBpm(bpm: number): void {
 export function setMetronome(enabled: boolean): void {
   change('Metrónomo', (p) => {
     p.metronome.enabled = enabled
+  })
+}
+
+// --- Grabación -------------------------------------------------------------
+
+export function toggleArm(id: TrackId): void {
+  change('Armar pista', (p) => {
+    const t = p.tracks[id]
+    if (t) t.armed = !t.armed
+  })
+}
+
+export function setRecordMode(mode: 'overdub' | 'replace' | 'linear'): void {
+  change('Modo de grabación', (p) => {
+    p.recordMode = mode
+  })
+}
+
+export function setCountIn(bars: number): void {
+  change('Cuenta previa', (p) => {
+    p.metronome.countInBars = bars
+  })
+}
+
+export function setNoteRepeat(patch: Partial<{ enabled: boolean; intervalTicks: number }>): void {
+  change('Note repeat', (p) => {
+    Object.assign(p.noteRepeat, patch)
+  })
+}
+
+export function quantizeTrack(trackId: TrackId, grid: number, strength: number, noteIds?: readonly NoteId[]): void {
+  const project = getProject()
+  const t = project.tracks[trackId]
+  const pattern = t?.activePatternId ? project.patterns[t.activePatternId] : undefined
+  if (!pattern) return
+  const next = quantizePattern(project, pattern.id, { gridTicks: grid, strength, swing: pattern.swing }, noteIds)
+  useApp.getState().replace('Cuantizar', next)
+}
+
+// --- Notas (piano roll) ----------------------------------------------------
+
+export interface NoteEdit {
+  id: NoteId
+  tick: number
+  durationTicks: number
+  pitch: number
+}
+
+export function addNote(trackId: TrackId, tick: number, durationTicks: number, pitch: number, velocity = 100): NoteId | null {
+  const id = newId<NoteId>()
+  let ok = false
+  change('Nota', (p) => {
+    const t = p.tracks[trackId]
+    const pattern = t?.activePatternId ? p.patterns[t.activePatternId] : undefined
+    if (!pattern) return
+    pattern.notes.push({ id, tick: Math.round(tick), durationTicks: Math.max(1, Math.round(durationTicks)), pitch, velocity })
+    ok = true
+  })
+  return ok ? id : null
+}
+
+/** Mueve/redimensiona notas. Una nota movida a mano pierde su timing grabado. */
+export function editNotes(trackId: TrackId, edits: readonly NoteEdit[], label: string): void {
+  const byId = new Map(edits.map((e) => [e.id, e]))
+  change(label, (p) => {
+    const t = p.tracks[trackId]
+    const pattern = t?.activePatternId ? p.patterns[t.activePatternId] : undefined
+    if (!pattern) return
+    for (const n of pattern.notes) {
+      const e = byId.get(n.id)
+      if (!e) continue
+      n.tick = Math.round(e.tick)
+      n.durationTicks = Math.max(1, Math.round(e.durationTicks))
+      n.pitch = e.pitch
+      delete n.recorded
+    }
+  })
+}
+
+export function deleteNotes(trackId: TrackId, ids: readonly NoteId[]): void {
+  const set = new Set(ids)
+  change('Borrar notas', (p) => {
+    const t = p.tracks[trackId]
+    const pattern = t?.activePatternId ? p.patterns[t.activePatternId] : undefined
+    if (pattern) pattern.notes = pattern.notes.filter((n) => !set.has(n.id))
+  })
+}
+
+export function setNotesVelocity(trackId: TrackId, ids: readonly NoteId[], velocity: number): void {
+  const set = new Set(ids)
+  change('Velocity', (p) => {
+    const t = p.tracks[trackId]
+    const pattern = t?.activePatternId ? p.patterns[t.activePatternId] : undefined
+    for (const n of pattern?.notes ?? []) if (set.has(n.id)) n.velocity = Math.min(127, Math.max(1, Math.round(velocity)))
+  })
+}
+
+// --- Controladores (lo que decide el proyecto) -----------------------------
+
+function assignmentFor(p: Draft<Project>, profileId: ControllerProfileId) {
+  let a = p.controllers.find((c) => c.profileId === profileId)
+  if (!a) {
+    p.controllers.push({ profileId, padTargets: {}, defaultTrackId: null })
+    a = p.controllers.at(-1)!
+  }
+  return a
+}
+
+export function setPadTarget(profileId: ControllerProfileId, controlId: ControlId, target: NoteTarget | null): void {
+  change('Destino del pad', (p) => {
+    const a = assignmentFor(p, profileId)
+    if (target) a.padTargets[controlId] = target
+    else delete a.padTargets[controlId]
+  })
+}
+
+export function setControllerDefaultTrack(profileId: ControllerProfileId, trackId: TrackId | null): void {
+  change('Pista del controlador', (p) => {
+    assignmentFor(p, profileId).defaultTrackId = trackId
   })
 }

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { resumeAudio } from '../audio/context'
 import { ensureLoaded } from '../audio/library'
-import { togglePlay } from '../audio/engineHost'
+import { startOrStopRecording, togglePlay } from '../audio/engineHost'
 import { importFiles, mergeSelected, removeMarker, selectSlice } from '../state/actions'
 import { restoreProject, startAutosave } from '../state/persistence'
+import { loadSettings } from '../state/settings'
 import { getProject, useApp, useProject } from '../state/store'
 import { Library } from './Library'
 import { startPadLights } from './padLights'
@@ -11,7 +12,8 @@ import { Pads } from './Pads'
 import { PAD_KEYS, PADS_PER_BANK, padDown, padUp } from './pads'
 import { isPreviewPlaying, previewFrom, stopAll } from './preview'
 import { SliceEditor } from './SliceEditor'
-import { StepGrid } from './StepGrid'
+import { ControllerPanel } from './ControllerPanel'
+import { TrackView } from './TrackView'
 import { Tracks } from './Tracks'
 import { Transport } from './Transport'
 
@@ -23,6 +25,7 @@ export function App() {
   const [ready, setReady] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [controllerOpen, setControllerOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const selectedId = useApp((s) => s.ui.selectedAssetId)
   const view = useApp((s) => s.ui.view)
@@ -39,6 +42,7 @@ export function App() {
     let stop = () => {}
     void (async () => {
       try {
+        await loadSettings()
         const saved = await restoreProject()
         if (saved) {
           const missing = await ensureLoaded(Object.values(saved.assets))
@@ -124,6 +128,7 @@ export function App() {
         return
       }
       if (mod || e.altKey) return
+      if (document.querySelector('.modal')) return
 
       const { ui } = useApp.getState()
       const pad = PAD_KEYS.indexOf(key as (typeof PAD_KEYS)[number])
@@ -134,7 +139,8 @@ export function App() {
       }
       if (e.key === ' ') {
         e.preventDefault()
-        togglePlay()
+        if (e.shiftKey) startOrStopRecording()
+        else togglePlay()
         return
       }
 
@@ -182,7 +188,7 @@ export function App() {
     <div className="app" onPointerDown={resumeAudio}>
       <header className="topbar">
         <h1>proyectoX</h1>
-        <Transport />
+        <Transport onOpenController={() => setControllerOpen(true)} />
         <button disabled={!canUndo} title={canUndo ? `Deshacer: ${canUndo} (Ctrl/Cmd+Z)` : 'Nada que deshacer'} onClick={undo}>
           ↶ Deshacer
         </button>
@@ -191,7 +197,12 @@ export function App() {
         </button>
         <div className="spacer" />
         {notice && <span className="notice">{notice}</span>}
-        <span className="muted small">Espacio: play/stop · Enter: escuchar sample · M: unir · Supr: quitar marcador</span>
+        <span
+          className="muted small shortcuts"
+          title={'Espacio: play/stop\nShift+Espacio: grabar\nZXCV ASDF QWER 1234: pads\nEnter: escuchar el sample\nM: unir slices · Supr: quitar marcador\nCtrl/Cmd+Z: deshacer'}
+        >
+          Atajos ⓘ
+        </span>
       </header>
       <aside className="sidebar">
         <Library onImport={() => fileRef.current?.click()} />
@@ -209,7 +220,7 @@ export function App() {
         {!ready ? (
           <div className="editor empty">Abriendo…</div>
         ) : view === 'track' && track && (track.kind === 'drumRack' || track.kind === 'slicer') ? (
-          <StepGrid track={track} />
+          <TrackView key={track.id} track={track} />
         ) : asset ? (
           <SliceEditor asset={asset} />
         ) : (
@@ -218,8 +229,10 @@ export function App() {
             <span className="muted small">wav, mp3, flac, ogg, m4a, aiff</span>
           </button>
         )}
-        <Pads />
       </main>
+      <aside className="pads-col">
+        <Pads />
+      </aside>
       <input
         ref={fileRef}
         type="file"
@@ -232,6 +245,7 @@ export function App() {
         }}
       />
       {dragging && <div className="drop-overlay">Suelta para importar</div>}
+      {controllerOpen && <ControllerPanel onClose={() => setControllerOpen(false)} />}
     </div>
   )
 }

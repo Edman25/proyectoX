@@ -20,6 +20,8 @@ export interface UiState {
   view: 'sample' | 'track'
   /** Resolución de la grilla de pasos, en ticks. */
   stepTicks: number
+  /** Editor de la pista: grilla de pasos o piano roll. */
+  trackEditor: 'steps' | 'roll'
 }
 
 const INITIAL_UI: UiState = {
@@ -30,6 +32,7 @@ const INITIAL_UI: UiState = {
   selectedTrackId: null,
   view: 'sample',
   stepTicks: 240,
+  trackEditor: 'steps',
 }
 
 interface AppState {

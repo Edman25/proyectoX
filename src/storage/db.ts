@@ -2,9 +2,9 @@
  * Envoltura mínima de IndexedDB. Todo se queda en el navegador del usuario.
  */
 const DB_NAME = 'proyectox'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
-export type StoreName = 'audio' | 'projects'
+export type StoreName = 'audio' | 'projects' | 'settings'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -15,6 +15,7 @@ function open(): Promise<IDBDatabase> {
       const db = req.result
       if (!db.objectStoreNames.contains('audio')) db.createObjectStore('audio')
       if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects')
+      if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings')
     }
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error ?? new Error('No se pudo abrir IndexedDB'))
