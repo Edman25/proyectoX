@@ -1,6 +1,6 @@
 # Plan — App de chops, samples y secuenciación
 
-Estado: **borrador para revisión** (no hay código todavía).
+Estado: **aprobado** — en fase 0.
 
 ## Objetivo
 
@@ -12,6 +12,23 @@ Una app que corre en local en el navegador (empaquetable después como app de es
 - Arreglar la canción, cambiar BPM y tono con calidad, mezclar y exportar a WAV.
 
 Fuera de alcance por ahora: grabar movimientos de perillas (automatización), plugins VST, Safari.
+
+## Filosofía
+
+**Es un sampler de chops para tocar y grabar, no un DAW completo.** El centro es el flujo **cargar → cortar → mapear → tocar → grabar → arreglar**. Lo que no sirva a ese flujo queda fuera por ahora.
+
+1. **Tocar se siente inmediato.** La latencia manda; si algo de calidad agrega retraso al tocar, se resuelve con pre-render. El audio tiene prioridad sobre lo visual.
+2. **Nunca pierdes nada.** Nada es destructivo; todo se deshace; se graba el timing real y cuantizar es aparte.
+3. **Un modelo, muchas vistas.** Todo son notas, todo son eventos. Una sola ruta de código para secuenciador, controlador, mouse y teclado.
+4. **Las manos en el controlador.** Todo lo importante es mapeable con learn; grabar es un botón.
+5. **Calidad donde se escucha, simpleza donde no.** No se construyen funciones antes que el flujo que las necesita.
+6. **El motor no depende de la interfaz.** TypeScript puro, igual en vivo que offline; los tiempos los validan los tests, el sonido lo valida el usuario.
+7. **Local y tuyo.** Sin cuentas ni nube; los proyectos son archivos portables.
+8. **Crecer por capas.** Cada fase deja algo usable.
+
+**Cuando algo choque:** que suene a tiempo > no perder trabajo > rapidez del flujo > más funciones.
+
+**Interfaz:** atajos de teclado para todo, drag & drop, pads grandes, feedback visual de lo que hace el controlador.
 
 ## Decisiones tomadas
 
@@ -119,7 +136,7 @@ Los instrumentos reciben `noteOn(tiempo, altura, velocity)` y `noteOff(tiempo, a
 | 5 | Tempo y tono | Worker con Signalsmith, caché de renders, detección de BPM y nota raíz, modo "mantener duración" (con pre-render al armar), ajuste de samples al BPM | Meter un sample de 90 en un beat de 140 sin cambiar el tono |
 | 6 | Arreglo y consolidación | Línea de tiempo, pistas de audio, **grabación lineal**, tira de chops → loop nuevo, consolidar slices no contiguos | Armar la canción completa |
 | 7 | Mixer, export y proyectos | Vol/pan/mute/solo, filtros, reverb, delay, **MIDI learn de perillas**, exportar WAV (mezcla y stems), guardar/abrir `.zip` | Sacar la rola terminada |
-| 8 | Extras | Separación de stems (Demucs), tonalidad, sincronía por MIDI clock, Tauri con MIDI nativo | — |
+| 8 | Extras | Separación de stems (Demucs), tonalidad, MIDI clock (enviar y seguir), Tauri con MIDI nativo | — |
 
 ## Uso de Fable (subagente, esfuerzo **medium**)
 

@@ -1,0 +1,27 @@
+:root {
+  --bg: #121214;
+  --surface: #1c1c20;
+  --text: #e9e9ec;
+  --muted: #9a9aa3;
+  --accent: #e8a33d;
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.shell {
+  padding: 24px;
+}
+
+.shell p {
+  color: var(--muted);
+}
