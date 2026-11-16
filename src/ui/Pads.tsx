@@ -1,24 +1,25 @@
-import type { SampleAsset } from '../model'
 import { useApp } from '../state/store'
-import { PAD_KEYS, PADS_PER_BANK, triggerPad } from './pads'
-import { usePreview } from './preview'
+import { usePadLights } from './padLights'
+import { PAD_KEYS, PADS_PER_BANK, padDown, padSource, padUp } from './pads'
 
 /** Filas de arriba a abajo, cada una de izquierda a derecha (pad 1 abajo a la izquierda). */
 const LAYOUT = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3]
 
-export function Pads({ asset }: { asset: SampleAsset | null }) {
-  const bank = useApp((s) => s.ui.padBank)
+export function Pads() {
+  const ui = useApp((s) => s.ui)
+  const project = useApp((s) => s.history.present)
+  const lit = usePadLights((s) => s.lit)
+  const source = padSource(project, ui)
+  const banks = Math.max(1, Math.ceil(source.count / PADS_PER_BANK))
+  const bank = Math.min(ui.padBank, banks - 1)
   const setUi = useApp((s) => s.setUi)
-  const selected = useApp((s) => s.ui.selectedSliceIds)
-  const lit = usePreview((s) => s.lit)
-
-  const slices = asset?.slices ?? []
-  const banks = Math.max(1, Math.ceil(slices.length / PADS_PER_BANK))
+  const track = ui.view === 'track' && ui.selectedTrackId ? project.tracks[ui.selectedTrackId] : undefined
 
   return (
     <section className="pads">
       <header>
         <h2>Pads</h2>
+        <span className="muted small">{track ? track.name : source.kind === 'sample' ? 'Slices del sample' : ''}</span>
         {banks > 1 && (
           <div className="banks">
             {Array.from({ length: banks }, (_, b) => (
@@ -28,24 +29,31 @@ export function Pads({ asset }: { asset: SampleAsset | null }) {
             ))}
           </div>
         )}
-        {slices.length === 0 && asset && <span className="muted small">Corta el sample para llenar los pads.</span>}
+        {source.kind === 'sample' && source.count === 0 && <span className="muted small">Corta el sample para llenar los pads.</span>}
       </header>
       <div className="pad-grid">
         {LAYOUT.map((pad) => {
           const index = bank * PADS_PER_BANK + pad
-          const slice = slices[index]
+          const exists = index < source.count
+          const label = exists ? source.label(index) : null
           const classes = ['pad']
-          if (!slice) classes.push('off')
-          if (slice && selected.includes(slice.id)) classes.push('selected')
-          if (index === lit) classes.push('lit')
+          if (!exists) classes.push('off')
+          else if (!label) classes.push('empty')
+          if (lit.has(index)) classes.push('lit')
           return (
             <button
               key={pad}
               className={classes.join(' ')}
-              disabled={!slice || !asset}
-              onPointerDown={() => asset && triggerPad(asset, bank, pad)}
+              disabled={!exists}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId)
+                padDown(index, e.timeStamp)
+              }}
+              onPointerUp={(e) => padUp(index, e.timeStamp)}
+              onPointerCancel={(e) => padUp(index, e.timeStamp)}
             >
-              <span className="pad-num">{slice ? index + 1 : ''}</span>
+              <span className="pad-num">{exists ? index + 1 : ''}</span>
+              {label && source.kind === 'track' && track?.kind === 'drumRack' && <span className="pad-label">{label}</span>}
               <span className="pad-key">{PAD_KEYS[pad]!.toUpperCase()}</span>
             </button>
           )

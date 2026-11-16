@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { resumeAudio } from '../audio/context'
 import { ensureLoaded } from '../audio/library'
+import { togglePlay } from '../audio/engineHost'
 import { importFiles, mergeSelected, removeMarker, selectSlice } from '../state/actions'
 import { restoreProject, startAutosave } from '../state/persistence'
 import { getProject, useApp, useProject } from '../state/store'
 import { Library } from './Library'
+import { startPadLights } from './padLights'
 import { Pads } from './Pads'
-import { PAD_KEYS, triggerPad } from './pads'
+import { PAD_KEYS, PADS_PER_BANK, padDown, padUp } from './pads'
 import { isPreviewPlaying, previewFrom, stopAll } from './preview'
 import { SliceEditor } from './SliceEditor'
+import { StepGrid } from './StepGrid'
+import { Tracks } from './Tracks'
+import { Transport } from './Transport'
 
 function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))
@@ -20,7 +25,11 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const selectedId = useApp((s) => s.ui.selectedAssetId)
+  const view = useApp((s) => s.ui.view)
+  const trackId = useApp((s) => s.ui.selectedTrackId)
+  const setUi = useApp((s) => s.setUi)
   const asset = useProject((p) => (selectedId ? p.assets[selectedId] ?? null : null))
+  const track = useProject((p) => (trackId ? p.tracks[trackId] ?? null : null))
   const canUndo = useApp((s) => s.history.past.at(-1)?.label ?? null)
   const canRedo = useApp((s) => s.history.future[0]?.label ?? null)
   const { undo, redo } = useApp.getState()
@@ -41,6 +50,7 @@ export function App() {
         setNotice('No se pudo abrir el proyecto guardado.')
       }
       stop = startAutosave()
+      startPadLights()
       setReady(true)
     })()
     return () => stop()
@@ -116,18 +126,23 @@ export function App() {
       if (mod || e.altKey) return
 
       const { ui } = useApp.getState()
-      const current = ui.selectedAssetId ? getProject().assets[ui.selectedAssetId] : undefined
-      if (!current) return
-
       const pad = PAD_KEYS.indexOf(key as (typeof PAD_KEYS)[number])
       if (pad >= 0) {
-        if (!e.repeat) triggerPad(current, ui.padBank, pad)
+        if (!e.repeat) padDown(ui.padBank * PADS_PER_BANK + pad, e.timeStamp)
         e.preventDefault()
         return
       }
+      if (e.key === ' ') {
+        e.preventDefault()
+        togglePlay()
+        return
+      }
+
+      const current = ui.view === 'sample' && ui.selectedAssetId ? getProject().assets[ui.selectedAssetId] : undefined
+      if (!current) return
       const selIdx = current.slices.findIndex((s) => s.id === ui.selectedSliceIds.at(-1))
       switch (e.key) {
-        case ' ':
+        case 'Enter':
           e.preventDefault()
           if (isPreviewPlaying()) stopAll()
           else previewFrom(current.id, 0)
@@ -151,14 +166,23 @@ export function App() {
         }
       }
     }
+    const onKeyUp = (e: KeyboardEvent) => {
+      const pad = PAD_KEYS.indexOf(e.key.toLowerCase() as (typeof PAD_KEYS)[number])
+      if (pad >= 0) padUp(useApp.getState().ui.padBank * PADS_PER_BANK + pad, e.timeStamp)
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKeyUp)
+    }
   }, [undo, redo])
 
   return (
     <div className="app" onPointerDown={resumeAudio}>
       <header className="topbar">
         <h1>proyectoX</h1>
+        <Transport />
         <button disabled={!canUndo} title={canUndo ? `Deshacer: ${canUndo} (Ctrl/Cmd+Z)` : 'Nada que deshacer'} onClick={undo}>
           ↶ Deshacer
         </button>
@@ -167,12 +191,25 @@ export function App() {
         </button>
         <div className="spacer" />
         {notice && <span className="notice">{notice}</span>}
-        <span className="muted small">Espacio: escuchar todo · M: unir · Supr: quitar marcador · ←→: slices</span>
+        <span className="muted small">Espacio: play/stop · Enter: escuchar sample · M: unir · Supr: quitar marcador</span>
       </header>
-      <Library onImport={() => fileRef.current?.click()} />
+      <aside className="sidebar">
+        <Library onImport={() => fileRef.current?.click()} />
+        <Tracks />
+      </aside>
       <main className="center">
+        <nav className="tabs">
+          <button className={view === 'sample' ? 'active' : ''} onClick={() => setUi({ view: 'sample' })}>
+            Sample{asset ? `: ${asset.name}` : ''}
+          </button>
+          <button className={view === 'track' ? 'active' : ''} disabled={!track} onClick={() => setUi({ view: 'track' })}>
+            Pista{track ? `: ${track.name}` : ''}
+          </button>
+        </nav>
         {!ready ? (
           <div className="editor empty">Abriendo…</div>
+        ) : view === 'track' && track && (track.kind === 'drumRack' || track.kind === 'slicer') ? (
+          <StepGrid track={track} />
         ) : asset ? (
           <SliceEditor asset={asset} />
         ) : (
@@ -181,7 +218,7 @@ export function App() {
             <span className="muted small">wav, mp3, flac, ogg, m4a, aiff</span>
           </button>
         )}
-        <Pads asset={asset} />
+        <Pads />
       </main>
       <input
         ref={fileRef}

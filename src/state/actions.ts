@@ -58,12 +58,12 @@ export async function importFiles(files: readonly File[]): Promise<{ imported: n
       failed.push(file.name)
     }
   }
-  if (lastId) setUi({ selectedAssetId: lastId, selectedSliceIds: [], padBank: 0 })
+  if (lastId) setUi({ selectedAssetId: lastId, selectedSliceIds: [], padBank: 0, view: 'sample' })
   return { imported, failed }
 }
 
 export function selectAsset(id: AssetId | null): void {
-  setUi({ selectedAssetId: id, selectedSliceIds: [], padBank: 0 })
+  setUi({ selectedAssetId: id, selectedSliceIds: [], padBank: 0, view: 'sample' })
 }
 
 export function renameAsset(id: AssetId, name: string): void {
@@ -96,14 +96,18 @@ export function selectSlice(id: SliceId, mode: 'replace' | 'toggle' | 'range' = 
     const has = ui.selectedSliceIds.includes(id)
     return setUi({ selectedSliceIds: has ? ui.selectedSliceIds.filter((s) => s !== id) : [...ui.selectedSliceIds, id] })
   }
-  // range: del último seleccionado a este
+  // range: del ancla (el primero de la selección) hasta este. Se guarda en
+  // orden ancla → destino, así el último es siempre el extremo que se mueve.
   const a = ui.selectedAssetId ? asset(ui.selectedAssetId) : undefined
-  const anchor = ui.selectedSliceIds.at(-1)
+  const anchor = ui.selectedSliceIds[0]
   if (!a || !anchor) return setUi({ selectedSliceIds: [id] })
   const i0 = a.slices.findIndex((s) => s.id === anchor)
   const i1 = a.slices.findIndex((s) => s.id === id)
-  const [lo, hi] = i0 < i1 ? [i0, i1] : [i1, i0]
-  setUi({ selectedSliceIds: a.slices.slice(lo, hi + 1).map((s) => s.id) })
+  if (i0 < 0 || i1 < 0) return setUi({ selectedSliceIds: [id] })
+  const step = i1 >= i0 ? 1 : -1
+  const ids: SliceId[] = []
+  for (let i = i0; i !== i1 + step; i += step) ids.push(a.slices[i]!.id)
+  setUi({ selectedSliceIds: ids })
 }
 
 export function addMarkerAt(id: AssetId, frame: number): void {

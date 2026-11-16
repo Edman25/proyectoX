@@ -20,15 +20,18 @@ npm run check    # typecheck + lint + tests
 - `src/analysis/` — picos de la forma de onda, detección de golpes, cruces por cero.
 - `src/state/` — estado de la app (Zustand), deshacer/rehacer con parches de Immer, acciones y autoguardado.
 - `src/storage/` — IndexedDB: el audio y el proyecto se quedan en tu navegador.
-- `src/audio/` — AudioContext, importación/decodificación y preview provisional de slices.
+- `src/audio/` — AudioContext, importación/decodificación, preview de slices y el host del motor (motor + sesión en vivo + router de entradas).
+- `src/engine/` — motor de audio, grabador, cuantizar y note repeat. Ver [`docs/ENGINE.md`](docs/ENGINE.md).
+- `src/midi/` — router de entradas, learn y Web MIDI.
 - `src/ui/` — biblioteca, editor de onda, inspector de slices y pads.
 
 ## Atajos
 
 | Tecla | Acción |
 |---|---|
-| Z X C V / A S D F / Q W E R / 1 2 3 4 | Pads 1–16 (misma forma que la grilla, pad 1 abajo a la izquierda) |
-| Espacio | Escuchar el sample completo / parar |
+| Z X C V / A S D F / Q W E R / 1 2 3 4 | Pads 1–16 de la pista seleccionada (o slices del sample); misma forma que la grilla, pad 1 abajo a la izquierda |
+| Espacio | Play / stop del transporte |
+| Enter | Escuchar el sample completo / parar |
 | ← → (Shift para extender) | Moverse entre slices |
 | M | Unir slices seleccionados |
 | Supr / Retroceso | Quitar el marcador al inicio del slice |

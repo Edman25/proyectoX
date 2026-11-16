@@ -1,4 +1,4 @@
-import { newId, type PadId, type PatternId, type ProjectId, type TrackId } from './ids'
+import { newId, type AssetId, type PadId, type PatternId, type ProjectId, type TrackId } from './ids'
 import {
   PROJECT_FORMAT_VERSION,
   type DrumPad,
@@ -8,6 +8,7 @@ import {
   type Pattern,
   type PlaybackOptions,
   type Project,
+  type SlicerTrack,
 } from './project'
 import { gridTicks, ticksPerBar, type TimeSignature } from './time'
 
@@ -60,6 +61,22 @@ export function createDrumRack(name: string, padCount = 16): DrumRackTrack {
     activePatternId: null,
     baseNote: DEFAULT_PAD_BASE_NOTE,
     pads: Array.from({ length: padCount }, createDrumPad),
+  }
+}
+
+export function createSlicerTrack(name: string, assetId: AssetId | null): SlicerTrack {
+  return {
+    id: newId<TrackId>(),
+    kind: 'slicer',
+    name,
+    color: '#5fb3f0',
+    mixer: { ...DEFAULT_MIXER },
+    armed: false,
+    activePatternId: null,
+    assetId,
+    baseNote: DEFAULT_PAD_BASE_NOTE,
+    triggerMode: 'oneShot',
+    monophonic: false,
   }
 }
 

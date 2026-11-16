@@ -11,7 +11,8 @@ import {
   setAssetBpm,
   updateSlicePlayback,
 } from '../state/actions'
-import { useApp } from '../state/store'
+import { useApp, useProject } from '../state/store'
+import { addSlicer, selectTrack, sendSlicesToPads } from '../state/trackActions'
 import { NumberField } from './NumberField'
 import { Waveform } from './Waveform'
 
@@ -38,6 +39,16 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
   const [gridStep, setGridStep] = useState(1)
   const [bars, setBars] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
+  const selectedTrackId = useApp((s) => s.ui.selectedTrackId)
+  const rack = useProject((p) => {
+    const sel = selectedTrackId ? p.tracks[selectedTrackId] : undefined
+    if (sel?.kind === 'drumRack') return sel
+    for (const id of p.trackOrder) {
+      const t = p.tracks[id]
+      if (t?.kind === 'drumRack') return t
+    }
+    return undefined
+  })
 
   if (!audio) return <div className="editor empty">Cargando audio…</div>
 
@@ -141,6 +152,15 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
             Cruce por cero
           </label>
         </div>
+        <div className="tool-group">
+          <button
+            disabled={asset.slices.length === 0}
+            title="Crear una pista Slicer: cada slice es una nota"
+            onClick={() => addSlicer(asset.id)}
+          >
+            → Slicer
+          </button>
+        </div>
         {message && <span className="toast">{message}</span>}
       </div>
 
@@ -198,6 +218,21 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
               />
               Reversa
             </label>
+            {rack && (
+              <button
+                title={`Poner los slices seleccionados en los pads vacíos de ${rack.name}`}
+                onClick={() => {
+                  const n = sendSlicesToPads(rack.id, asset.id, selectedSlices.map((x) => x.id))
+                  if (n === 0) flash(`${rack.name} no tiene pads vacíos`)
+                  else {
+                    flash(`${n} en ${rack.name}`)
+                    selectTrack(rack.id)
+                  }
+                }}
+              >
+                → Pads de {rack.name}
+              </button>
+            )}
           </>
         ) : (
           <span className="muted">Clic en un slice para escucharlo y ajustarlo. Shift o Ctrl/Cmd para seleccionar varios.</span>

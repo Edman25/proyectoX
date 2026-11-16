@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { AssetId } from '../model'
 import { removeAsset, renameAsset, selectAsset } from '../state/actions'
 import { useApp, useProject } from '../state/store'
@@ -7,11 +7,10 @@ export function Library({ onImport }: { onImport: () => void }) {
   const assets = useProject((p) => p.assets)
   const selectedId = useApp((s) => s.ui.selectedAssetId)
   const [editing, setEditing] = useState<AssetId | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
   const list = Object.values(assets)
 
   return (
-    <aside className="library">
+    <div className="library">
       <header>
         <h2>Biblioteca</h2>
         <button onClick={onImport}>+ Importar</button>
@@ -29,7 +28,6 @@ export function Library({ onImport }: { onImport: () => void }) {
             >
               {editing === a.id ? (
                 <input
-                  ref={inputRef}
                   autoFocus
                   defaultValue={a.name}
                   onBlur={(e) => {
@@ -66,6 +64,6 @@ export function Library({ onImport }: { onImport: () => void }) {
           ))}
         </ul>
       )}
-    </aside>
+    </div>
   )
 }

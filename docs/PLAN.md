@@ -1,6 +1,6 @@
 # Plan — App de chops, samples y secuenciación
 
-Estado: **aprobado** — en fase 0.
+Estado: fases 0–2 listas (motor y grabador del encargo 1 integrados). Siguiente: fase 3 (MIDI y grabación en la UI).
 
 ## Objetivo
 

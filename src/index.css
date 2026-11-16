@@ -373,3 +373,207 @@ button.icon:hover {
   font-size: 22px;
   pointer-events: none;
 }
+
+/* Fase 2 */
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar .library {
+  border-right: none;
+  overflow: visible;
+}
+.tracks {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+.tracks header {
+  margin-bottom: 8px;
+}
+.track-add {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.tracks ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tracks li {
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tracks li:hover {
+  background: var(--surface-2);
+}
+.tracks li.active {
+  background: var(--accent-dim);
+}
+.tracks li:hover button.icon {
+  visibility: visible;
+}
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.track-row .name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.track-row input:not([type='range']) {
+  flex: 1;
+  min-width: 0;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+button.ms {
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+}
+button.ms.on.mute {
+  background: var(--danger);
+  color: #111;
+}
+button.ms.on.solo {
+  background: var(--playhead);
+  color: #111;
+}
+.fader {
+  flex: 1;
+  min-width: 60px;
+}
+.db {
+  width: 46px;
+  text-align: right;
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 12px;
+}
+button.play {
+  width: 36px;
+  font-size: 14px;
+}
+.position {
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+.tabs button {
+  border-radius: 6px 6px 0 0;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequencer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.grid-scroll {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.step-grid {
+  border-collapse: separate;
+  border-spacing: 3px;
+}
+.step-grid th {
+  text-align: left;
+  font-weight: normal;
+  padding-right: 6px;
+  white-space: nowrap;
+}
+.row-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+button.audition {
+  min-width: 28px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+.sample-select {
+  width: 150px;
+  font-size: 12px;
+}
+.mini {
+  font-size: 11px;
+  padding: 2px 4px;
+}
+button.mini.on {
+  background: var(--playhead);
+  color: #111;
+}
+.step-grid td {
+  padding: 0;
+}
+.step {
+  display: block;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+}
+.step.beat {
+  background: #2b2b33;
+}
+.step.on {
+  background: var(--accent);
+}
+.step.now {
+  border-color: var(--playhead);
+}
+.step:hover {
+  border-color: var(--muted);
+}
+.pad-label {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 22px;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+.pad.lit .pad-label {
+  color: #111;
+}
+.pad.empty {
+  opacity: 0.7;
+}
