@@ -57,6 +57,8 @@ export interface EngineOptions {
   startDelaySec?: number
   /** A dónde va el metrónomo. Por defecto la salida; null = sin metrónomo. */
   metronomeOutput?: AudioNode | null
+  /** Reloj de "ahora" en tiempo de audio. Por defecto `context.currentTime`; inyectable para tests. */
+  now?: () => number
 }
 
 export interface PlayOptions {
@@ -125,6 +127,7 @@ export class Engine implements TransportClock {
   private readonly timer: SchedulerTimer
   private readonly lookaheadSec: number
   private readonly startDelaySec: number
+  private readonly nowFn: (() => number) | undefined
   private readonly buffers: BufferProvider
   private readonly renders: RenderCache
   private readonly reverse = new ReverseCache()
@@ -157,6 +160,7 @@ export class Engine implements TransportClock {
     this.timer = options.timer ?? intervalTimer()
     this.lookaheadSec = options.lookaheadSec ?? DEFAULT_LOOKAHEAD_SEC
     this.startDelaySec = options.startDelaySec ?? 0.05
+    this.nowFn = options.now
     this.mixer = new Mixer(ctx, ctx.destination)
     const metronomeOutput =
       options.metronomeOutput === undefined ? ctx.destination : options.metronomeOutput
@@ -169,6 +173,11 @@ export class Engine implements TransportClock {
       renders: this.renders,
       reverse: this.reverse,
     })
+  }
+
+  /** Tiempo de audio actual. */
+  now(): number {
+    return this.nowFn ? this.nowFn() : this.context.currentTime
   }
 
   // -------------------------------------------------------------------------
@@ -212,7 +221,7 @@ export class Engine implements TransportClock {
   }
 
   private syncInstruments(project: Project): void {
-    const now = this.context.currentTime
+    const now = this.now()
     for (const track of Object.values(project.tracks)) {
       const slot = this.slots.get(track.id)
       if (slot && slot.kind === track.kind) {
@@ -263,7 +272,7 @@ export class Engine implements TransportClock {
     if (!project) return null
     if (this.playing) this.stop()
     const bpm = projectBpm(project)
-    const startTime = this.context.currentTime + this.startDelaySec
+    const startTime = this.now() + this.startDelaySec
     const fromTick = options.fromTick ?? 0
     const countIn = Math.max(0, options.countInBars ?? 0) * ticksPerBar(project.timeSignature)
     this.segments = [{ time: startTime, tick: fromTick - countIn, linear: -countIn, bpm }]
@@ -282,7 +291,7 @@ export class Engine implements TransportClock {
 
   stop(): void {
     if (!this.playing) return
-    const now = this.context.currentTime
+    const now = this.now()
     this.stoppedTick = this.tickAtTime(now) ?? 0
     this.timer.stop()
     // Se sueltan las notas del secuenciador y se quita lo programado que
@@ -298,7 +307,7 @@ export class Engine implements TransportClock {
 
   /** Silencia todo de inmediato (también lo tocado en vivo). */
   panic(): void {
-    const now = this.context.currentTime
+    const now = this.now()
     for (const slot of this.slots.values()) slot.instrument.panic(now)
     this.audioClips.stopAll(now)
   }
@@ -306,7 +315,7 @@ export class Engine implements TransportClock {
   getPosition(): TransportPosition {
     const bpm = this.project ? projectBpm(this.project) : 120
     if (!this.playing) return { playing: false, tick: this.stoppedTick, countingIn: false, bpm }
-    const time = this.context.currentTime
+    const time = this.now()
     const tick = this.tickAtTime(time) ?? 0
     const linear = this.linearTickAtTime(time) ?? 0
     return { playing: true, tick, countingIn: linear < 0, bpm: this.segmentAt(time).bpm }
@@ -396,7 +405,7 @@ export class Engine implements TransportClock {
 
   /** Una pasada en vivo: programa hasta ahora + lookahead. */
   pump(): void {
-    const now = this.context.currentTime
+    const now = this.now()
     this.advanceTo(now + this.lookaheadSec)
     for (const listener of this.pumpListeners) listener(now)
   }
@@ -435,7 +444,7 @@ export class Engine implements TransportClock {
         this.cursorTick = endTick
       }
     }
-    const horizon = this.context.currentTime - HISTORY_SEC
+    const horizon = this.now() - HISTORY_SEC
     while (this.segments.length > 1 && this.segments[1]!.time < horizon) this.segments.shift()
   }
 
@@ -518,7 +527,7 @@ export class Engine implements TransportClock {
       ...offs.map((o) => ({ tick: Math.max(o.tick, from), off: true, target: o.target, velocity: 0 })),
       ...ons.map((o) => ({ ...o, off: false })),
     ].sort((a, b) => a.tick - b.tick || Number(b.off) - Number(a.off))
-    const lateLimit = this.context.currentTime - LATE_DROP_SEC
+    const lateLimit = this.now() - LATE_DROP_SEC
     for (const item of queue) {
       const time = timeOf(item.tick)
       if (item.off) {
