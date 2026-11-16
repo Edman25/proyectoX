@@ -837,6 +837,8 @@ button.icon.visible {
 .roll {
   max-height: 62vh;
   overflow-y: auto;
+  /* Que la cuadrícula mida lo que su contenido, no lo visible: si no, se recorta al bajar. */
+  align-items: flex-start;
 }
 .roll-scroll {
   overflow-y: visible;

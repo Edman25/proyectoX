@@ -2,8 +2,12 @@ import { useState } from 'react'
 import { useSyncExternalStore } from 'react'
 import { getLoadedAudio, subscribeLoadedAudio } from '../audio/library'
 import type { SampleAsset } from '../model'
+import { noteName } from '../model'
 import {
   autoSliceEqual,
+  detectAssetBpm,
+  detectRoot,
+  setAssetRootNote,
   autoSliceGrid,
   autoSliceTransients,
   clearSlices,
@@ -79,6 +83,26 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
           width={72}
           onCommit={(v) => setAssetBpm(asset.id, v > 0 ? v : null)}
         />
+        <button
+          title="Detectar el tempo del loop"
+          onClick={() => {
+            const est = detectAssetBpm(asset.id)
+            if (!est || !(est.confidence > 0)) flash('No se encontró un pulso claro')
+            else flash(`BPM ${Math.round(est.bpm * 100) / 100} (confianza ${Math.round(est.confidence * 100)}%)`)
+          }}
+        >
+          Detectar
+        </button>
+        {asset.bpm && (
+          <>
+            <button className="mini" title="Doble" onClick={() => setAssetBpm(asset.id, Math.round(asset.bpm! * 200) / 100)}>
+              ×2
+            </button>
+            <button className="mini" title="Mitad" onClick={() => setAssetBpm(asset.id, Math.round(asset.bpm! * 50) / 100)}>
+              ÷2
+            </button>
+          </>
+        )}
         <label className="field">
           <span>dura</span>
           <select value={bars} onChange={(e) => setBars(Number(e.target.value))}>
@@ -97,6 +121,17 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
           }}
         >
           Calcular BPM
+        </button>
+        <button
+          title="Detectar la nota del sample (para usarlo en un Sampler)"
+          onClick={() => {
+            const r = detectRoot(asset.id)
+            if (!r) return flash('No se encontró una nota clara')
+            setAssetRootNote(asset.id, r.midi)
+            flash(`Nota ${noteName(r.midi)} ${r.cents >= 0 ? '+' : ''}${Math.round(r.cents)} cents`)
+          }}
+        >
+          {asset.rootNote != null ? `Nota: ${noteName(asset.rootNote)}` : 'Detectar nota'}
         </button>
       </header>
 

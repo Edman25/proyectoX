@@ -2,6 +2,8 @@
  * Acciones de la fase 1 (biblioteca y slices). Cada una es un paso de deshacer.
  */
 import { detectOnsets, nearestZeroCrossing } from '../analysis/onsets'
+import { detectRootNote, type RootNote } from '../analysis/pitch'
+import { estimateBpm } from '../analysis/tempo'
 import { getLoadedAudio, importFile, isAudioFile } from '../audio/library'
 import type { AssetId, PlaybackOptions, SampleAsset, Slice, SliceId } from '../model'
 import {
@@ -173,4 +175,28 @@ export function updateSlicePlayback(id: AssetId, sliceIds: readonly SliceId[], p
       if (set.has(s.id)) Object.assign(s.playback, patch)
     }
   })
+}
+
+export function setAssetRootNote(id: AssetId, rootNote: number | null): void {
+  change('Nota del sample', (p) => {
+    const a = p.assets[id]
+    if (a) a.rootNote = rootNote
+  })
+}
+
+/** Detecta el BPM del sample completo y lo guarda. Devuelve la confianza (0–1) o null. */
+export function detectAssetBpm(id: AssetId): { bpm: number; confidence: number } | null {
+  const audio = getLoadedAudio(id)
+  if (!audio) return null
+  const est = estimateBpm(audio.mono, audio.buffer.sampleRate)
+  if (!(est.confidence > 0)) return est
+  setAssetBpm(id, Math.round(est.bpm * 100) / 100)
+  return est
+}
+
+/** Detecta la nota de una porción del sample (o de todo). */
+export function detectRoot(id: AssetId, start = 0, end?: number): RootNote | null {
+  const audio = getLoadedAudio(id)
+  if (!audio) return null
+  return detectRootNote(audio.mono.subarray(start, end ?? audio.mono.length), audio.buffer.sampleRate)
 }

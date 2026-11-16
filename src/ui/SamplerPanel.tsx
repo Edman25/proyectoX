@@ -4,10 +4,12 @@
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { peaksForView } from '../analysis/peaks'
+import { getRenderCache, prerenderTrack, useLive } from '../audio/engineHost'
 import { getLoadedAudio, subscribeLoadedAudio } from '../audio/library'
-import { resolveSampleRef } from '../engine'
+import { resolveSampleRef, samplerRenderKeys } from '../engine'
 import { noteName, type SamplerTrack } from '../model'
 import { useProject } from '../state/store'
+import { detectRoot } from '../state/actions'
 import { updateSampler } from '../state/trackActions'
 import { Fader } from './Fader'
 import { NumberField } from './NumberField'
@@ -61,6 +63,14 @@ export function SamplerPanel({ track }: { track: SamplerTrack }) {
   const id = track.id
   const env = track.envelope
 
+  // "Mantener duración": dejar listos todos los semitonos para tocar sin latencia.
+  useLive((s) => s.rendersReady) // re-render con cada render listo (progreso)
+  const keys = samplerRenderKeys(project, id)
+  const ready = keys.filter((k) => getRenderCache().has(k)).length
+  useEffect(() => {
+    if (track.pitchMode === 'preserve') prerenderTrack(id)
+  }, [id, track.pitchMode, track.sample, track.rootNote, track.playback.pitch, track.playback.reverse, asset])
+
   return (
     <div className="sampler">
       <div className="sampler-row">
@@ -78,6 +88,17 @@ export function SamplerPanel({ track }: { track: SamplerTrack }) {
             ))}
           </select>
         </label>
+        {region && (
+          <button
+            title="Detectar la nota de este sample y usarla como raíz"
+            onClick={() => {
+              const r = detectRoot(region.assetId, region.start, region.end)
+              if (r) updateSampler(id, 'Nota raíz', (t) => void (t.rootNote = r.midi))
+            }}
+          >
+            Detectar
+          </button>
+        )}
         {asset?.rootNote != null && asset.rootNote !== track.rootNote && (
           <button onClick={() => updateSampler(id, 'Nota raíz', (t) => void (t.rootNote = asset.rootNote!))}>Usar {noteName(asset.rootNote)}</button>
         )}
@@ -89,7 +110,11 @@ export function SamplerPanel({ track }: { track: SamplerTrack }) {
             Mantener duración
           </button>
         </nav>
-        {track.pitchMode === 'preserve' && <span className="muted small">Llega en la fase 5; por ahora suena como resample.</span>}
+        {track.pitchMode === 'preserve' && keys.length > 0 && (
+          <span className={`small ${ready < keys.length ? 'toast' : 'muted'}`}>
+            {ready < keys.length ? `Preparando notas ${ready}/${keys.length}… (mientras, suenan en resample)` : `${keys.length} notas listas`}
+          </span>
+        )}
       </div>
 
       <div className="sampler-row">
