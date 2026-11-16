@@ -4,7 +4,16 @@
  * Todo lo que suena —secuenciador, pads, teclado y MIDI— pasa por aquí.
  */
 import { create } from 'zustand'
-import { Engine, LiveSession, applyTake } from '../engine'
+import { createStretchProvider, createWorkerRunner } from '../dsp'
+import {
+  Engine,
+  LiveSession,
+  LruRenderCache,
+  applyTake,
+  prerenderSampler,
+  type PrerenderStatus,
+  type RenderKey,
+} from '../engine'
 import {
   InputRouter,
   ManualMidiSource,
@@ -14,7 +23,7 @@ import {
   requestWebMidi,
   type WebMidiSource,
 } from '../midi'
-import type { NoteTarget } from '../model'
+import type { NoteTarget, TrackId } from '../model'
 import { useSettings } from '../state/settings'
 import { useApp } from '../state/store'
 import { getAudioContext, resumeAudio } from './context'
@@ -24,7 +33,11 @@ interface Host {
   engine: Engine
   session: LiveSession
   router: InputRouter
+  renders: LruRenderCache
 }
+
+/** Memoria máxima para renders de stretch / tono (float32). Al pasarse sale el menos usado. */
+const RENDER_CACHE_BYTES = 384 * 1024 * 1024
 
 export type MidiStatus = 'off' | 'connecting' | 'on' | 'unsupported' | 'error'
 
@@ -35,6 +48,8 @@ interface LiveState {
   devices: string[]
   /** Encendido brevemente con cada mensaje MIDI (indicador de actividad). */
   midiBlink: boolean
+  /** Sube en 1 cada vez que queda listo un render de stretch / tono. */
+  rendersReady: number
 }
 
 export const useLive = create<LiveState>()(() => ({
@@ -43,7 +58,10 @@ export const useLive = create<LiveState>()(() => ({
   midiError: null,
   devices: [],
   midiBlink: false,
+  rendersReady: 0,
 }))
+
+const renderListeners = new Set<(key: RenderKey) => void>()
 
 let host: Host | null = null
 let midi: WebMidiSource | null = null
@@ -51,7 +69,17 @@ let midi: WebMidiSource | null = null
 function getHost(): Host {
   if (host) return host
   const context = getAudioContext()
-  const engine = new Engine({ context, buffers: { getBuffer } })
+  // Renders con duración/tono independientes: Signalsmith Stretch en un Worker.
+  const renders = new LruRenderCache({
+    maxBytes: RENDER_CACHE_BYTES,
+    provider: createStretchProvider({ run: createWorkerRunner().run }),
+    buffers: { getBuffer },
+    onReady: (key) => {
+      useLive.setState((s) => ({ rendersReady: s.rendersReady + 1 }))
+      for (const listener of renderListeners) listener(key)
+    },
+  })
+  const engine = new Engine({ context, buffers: { getBuffer }, renders })
   const session = new LiveSession({
     engine,
     latencySec: useSettings.getState().latencyMs / 1000,
@@ -78,7 +106,7 @@ function getHost(): Host {
       else session.transport(action, pressed)
     },
   })
-  host = { engine, session, router }
+  host = { engine, session, router, renders }
   return host
 }
 
@@ -88,6 +116,26 @@ export function getEngine(): Engine {
 
 export function getSession(): LiveSession {
   return getHost().session
+}
+
+/** La caché de renders del motor (`has(key)` dice si uno ya está). */
+export function getRenderCache(): LruRenderCache {
+  return getHost().renders
+}
+
+/** Avisa cada vez que un render queda listo. Devuelve la función para dejar de escuchar. */
+export function subscribeRenders(listener: (key: RenderKey) => void): () => void {
+  renderListeners.add(listener)
+  return () => renderListeners.delete(listener)
+}
+
+/**
+ * Deja listos los semitonos de un Sampler en `preserve` (±`range` desde la
+ * raíz). Llamar al armar o seleccionar la pista, o al cambiar su sample:
+ * no repite lo que ya está. En cualquier otra pista no hace nada.
+ */
+export function prerenderTrack(trackId: TrackId, range = 24): PrerenderStatus {
+  return prerenderSampler(useApp.getState().history.present, trackId, getHost().renders, range)
 }
 
 /** Nota en vivo desde la pantalla o el teclado de la compu. `timeStamp` es el del evento del DOM. */

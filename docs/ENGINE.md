@@ -213,9 +213,57 @@ Opciones: `context`, `buffers`, `renders?`, `timer?`, `lookaheadSec?` (0.1), `st
 - `setInterval` se frena con la pestaña en segundo plano: para eso está el `timer` inyectable.
 - `asset.frames` debe coincidir con el largo del buffer; si no, se recorta al menor.
 
+## Tempo y tono (fase 5)
+
+Código: `src/dsp/` (stretch), `src/engine/prerender.ts`, `src/analysis/tempo.ts` y `pitch.ts`. Conexión en `src/audio/engineHost.ts`.
+
+### API para la UI
+
+```ts
+import { prerenderTrack, getRenderCache, subscribeRenders, useLive } from '../audio/engineHost'
+import { estimateBpm } from '../analysis/tempo'
+import { detectRootNote } from '../analysis/pitch'
+
+// Al armar / seleccionar un Sampler en `preserve`, o al cambiar su sample o su raíz:
+const { total, ready } = prerenderTrack(trackId) // ±24 semitonos; idempotente y barato si ya están
+
+// Saber cuándo hay renders listos:
+useLive((s) => s.rendersReady)        // contador, sube con cada render (para re-dibujar)
+subscribeRenders((key) => { ... })    // lo mismo, fuera de React
+getRenderCache().has(key)             // ¿está este render?
+prerenderTrack(trackId)               // volver a llamarla da el { total, ready } actual
+
+// Análisis (puro, sobre getLoadedAudio(id).mono):
+estimateBpm(mono, sampleRate)         // { bpm, confidence }
+detectRootNote(mono, sampleRate)      // { midi, cents, confidence } | null
+```
+
+Sin motor: `prerenderSampler(project, trackId, cache, range = 24)` y `samplerRenderKeys(...)` (en `src/engine`), `createStretchProvider({ run })` y `createWorkerRunner()` (en `src/dsp`). Los clips de audio con warp `preserve` no necesitan nada: el motor pide su render al sonar y la siguiente vez ya suena estirado.
+
+### Decisiones
+
+30. **Paquete: `signalsmith-stretch` 1.3.2 (MIT), versión fija.** El paquete solo expone un AudioWorkletNode (tiempo real); para renderizar offline se usa el WASM que lleva dentro. `workletShim.ts` define los globales de AudioWorklet antes de importarlo, el paquete registra su procesador y de él se toma el módulo WASM. No se copia ni se modifica el paquete, pero depende de su estructura interna: por eso la versión va sin `^`, y si cambia, `loadSignalsmith` falla con un mensaje claro (y el motor sigue con su fallback).
+31. **Núcleo puro + transporte.** `stretchCore.ts` es `Float32Array[] → Float32Array[]` y se prueba en Node. `stretchWorker.ts` es el Worker (cola en orden de llegada); `stretchProvider.ts` recorta la porción de la clave (la única copia), transfiere los buffers al Worker y recibe el resultado transferido. El hilo principal no carga el WASM. Vite empaqueta el Worker solo con `new Worker(new URL(...))`: no hizo falta tocar `vite.config.ts` (el WASM va en base64 dentro del JS del paquete; el chunk del Worker pesa ~100 kB y se descarga con el primer render).
+32. **Configuración: preset por defecto de Signalsmith** (bloque 120 ms, salto 30 ms, límite tonal 8 kHz). Se midió el pre-eco de un golpe de ruido sobre una nota grave con bloques de 120, 80, 60 y 40 ms: el ataque sale igual (< 0.5 dB de diferencia), así que no hay motivo para sacrificar resolución en graves. Con `stretchRatio = 1` y `semitones = 0` se devuelve una copia exacta.
+33. **Latencia compensada.** Pre-roll de `inputLatency` muestras con `seek` y descarte de las primeras `outputLatency` de salida: el frame 0 del render es el frame 0 de la porción. Largo del render = `round(frames / stretchRatio)`, con el sample rate del original.
+34. **Solo `preserve`.** Una clave `resample` se rechaza (el motor la hace en tiempo real). `stretchRatio` válido: 0.125–8.
+35. **Pre-render del Sampler**: ±24 semitonos desde `rootNote` (dentro de 0–127), las notas más cercanas a la raíz primero. Usa exactamente las claves del motor (incluye el `pitch` de la pista y del slice). Cambiar sample, rango, raíz o pitch produce claves nuevas: hay que volver a llamarla.
+36. **Caché de 384 MB** (LRU). 48 renders de un sample estéreo de 2 s a 48 kHz son ~37 MB.
+37. **`estimateBpm`**: envolvente de ataques (energía + derivada, 200 cuadros/s) → autocorrelación → tempo cuyo pulso y sus múltiplos (hasta 4) mejor encajan, de 60 a 180. Doble/mitad: decide la evidencia y, si empata (lo normal entre un tempo y su mitad), gana el más cercano a 120; por eso > ~165 BPM sale a la mitad y un loop lento con corcheas marcadas puede salir al doble. Si con ese tempo el audio dura casi (±1.5 %) un número entero de compases de 4/4, se ajusta al valor exacto (`snapToLoop`, activo por defecto).
+38. **`detectRootNote`**: McLeod (NSDF) en hasta 16 ventanas de 85 ms; se descartan las de poco nivel o tono poco claro y la primera (ataque), y se promedia alrededor de la mediana. Rango 27.5–2100 Hz. `null` si no hay tono.
+
+### Límites
+
+- Un solo Worker, en orden de llegada: con un pre-render en curso (48 renders), el render de un clip recién pedido espera su turno. No hay cancelación ni prioridades.
+- Si la caché se llena, salen los renders menos usados y esas notas vuelven al fallback hasta pedirlos otra vez.
+- Los renders no se guardan en disco: se rehacen en cada sesión.
+- Transponer muchos semitonos cambia el timbre (no hay corrección de formantes activada).
+- Los puntos de loop del Sampler se escalan al largo del render; con `stretchRatio = 1` coinciden.
+- `estimateBpm` supone tempo constante y compás de 4/4 para el ajuste; `detectRootNote` es monofónico (un acorde da un resultado poco fiable, con confianza baja).
+
 ## Puntos de enchufe
 
-- **Stretch (Signalsmith)**: implementa `RenderProvider.render(key, source)` y pásalo a `new LruRenderCache({ maxBytes, provider, buffers, onReady })`. El motor ya consulta `get` y llama `request` con la clave `(assetId, start, end, stretchRatio, semitones, mode)`. Para el pre-render al armar un Sampler en `preserve`, llama `cache.request(key)` por cada semitono del rango.
+- **Stretch (Signalsmith)**: hecho, ver "Tempo y tono".
 - **Temporizador en Worker**: implementa `SchedulerTimer`.
 - **Perillas / faders**: `InputRouter.onControl` ya entrega `(controlId, valor 0–1)`; falta el mapa control → parámetro.
 - **Calibración de latencia**: `session.latencySec`. Falta la pantalla de calibración.
@@ -224,6 +272,6 @@ Opciones: `context`, `buffers`, `renders?`, `timer?`, `lookaheadSec?` (0.1), `st
 
 ## Tests
 
-`npm test`. Web Audio en Node vía `node-web-audio-api` (devDependency): permite usar el `OfflineAudioContext` real, así los tests de alineación miden audio renderizado y no un simulacro. Cubren: tiempo y swing, bordes de loop, patrones de largos distintos, cambio de BPM, modo canción y `songLoop`, count-in, choke, one-shot/gate, slicer, sampler, mixer, clips de audio, render offline con golpes en el frame esperado (±1), router y learn, grabación con MIDI sintético, cuantizar y note repeat.
+`npm test`. Web Audio en Node vía `node-web-audio-api` (devDependency): permite usar el `OfflineAudioContext` real, así los tests de alineación miden audio renderizado y no un simulacro. Cubren: tiempo y swing, bordes de loop, patrones de largos distintos, cambio de BPM, modo canción y `songLoop`, count-in, choke, one-shot/gate, slicer, sampler, mixer, clips de audio, render offline con golpes en el frame esperado (±1), router y learn, grabación con MIDI sintético, cuantizar y note repeat. Fase 5: stretch (duración, tono, alineación del inicio, transporte por Worker simulado, caché + proveedor, pre-render), tempo y nota raíz sobre señales sintéticas; el WASM real corre en Node.
 
 Dos rarezas de `node-web-audio-api` encontradas: `setTargetAtTime` sobre `playbackRate` deja la fuente en silencio (por eso el glide usa rampas explícitas, que además se oyen mejor), y un inicio en posición fraccionaria de frame se interpola (de ahí el ±1).
