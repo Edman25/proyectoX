@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { TrackId } from '../model'
 import { useApp, useProject } from '../state/store'
-import { addDrumRack, addSlicer, removeTrack, renameTrack, selectTrack, setMixer, toggleArm } from '../state/trackActions'
+import { addDrumRack, addSamplerFromSelection, addSlicer, removeTrack, renameTrack, selectTrack, setMixer, toggleArm } from '../state/trackActions'
 import { Fader } from './Fader'
 
 const KIND_LABEL = { drumRack: 'Drum Rack', slicer: 'Slicer', sampler: 'Sampler', audio: 'Audio' } as const
@@ -26,6 +26,12 @@ export function Tracks() {
           onClick={() => asset && addSlicer(asset.id)}
         >
           + Slicer
+        </button>
+        <button
+          title={asset ? `Sampler con ${ui.selectedSliceIds.length === 1 ? 'el slice seleccionado' : asset.name}` : 'Sampler vacío'}
+          onClick={() => addSamplerFromSelection()}
+        >
+          + Sampler
         </button>
       </div>
       <ul>

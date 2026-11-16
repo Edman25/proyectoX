@@ -12,7 +12,7 @@ import {
   updateSlicePlayback,
 } from '../state/actions'
 import { useApp, useProject } from '../state/store'
-import { addSlicer, selectTrack, sendSlicesToPads } from '../state/trackActions'
+import { addSamplerFromSelection, addSlicer, selectTrack, sendSlicesToPads } from '../state/trackActions'
 import { NumberField } from './NumberField'
 import { Waveform } from './Waveform'
 
@@ -159,6 +159,12 @@ export function SliceEditor({ asset }: { asset: SampleAsset }) {
             onClick={() => addSlicer(asset.id)}
           >
             → Slicer
+          </button>
+          <button
+            title={selected.length === 1 ? 'Tocar el slice seleccionado como instrumento' : 'Tocar el sample completo como instrumento'}
+            onClick={() => addSamplerFromSelection()}
+          >
+            → Sampler
           </button>
         </div>
         {message && <span className="toast">{message}</span>}

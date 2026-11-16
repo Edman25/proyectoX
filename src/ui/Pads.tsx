@@ -53,7 +53,7 @@ export function Pads() {
               onPointerCancel={(e) => padUp(index, e.timeStamp)}
             >
               <span className="pad-num">{exists ? index + 1 : ''}</span>
-              {label && source.kind === 'track' && track?.kind === 'drumRack' && <span className="pad-label">{label}</span>}
+              {label && source.kind === 'track' && (track?.kind === 'drumRack' || track?.kind === 'sampler') && <span className="pad-label">{label}</span>}
               <span className="pad-key">{PAD_KEYS[pad]!.toUpperCase()}</span>
             </button>
           )

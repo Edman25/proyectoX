@@ -3,12 +3,14 @@
  * cuantizar) y el editor (grilla de pasos o piano roll).
  */
 import { useState } from 'react'
-import { gridTicks, ticksPerBar, type DrumRackTrack, type NoteId, type SlicerTrack } from '../model'
+import { gridTicks, ticksPerBar, type NoteId } from '../model'
 import { useApp, useProject } from '../state/store'
 import { clearPattern, quantizeTrack, setNotesVelocity, setPatternBars, setSwing } from '../state/trackActions'
 import { Fader } from './Fader'
 import { NumberField } from './NumberField'
 import { PianoRoll } from './PianoRoll'
+import type { NoteTrack } from './rows'
+import { SamplerPanel } from './SamplerPanel'
 import { StepGrid } from './StepGrid'
 
 const RESOLUTIONS = [
@@ -19,11 +21,13 @@ const RESOLUTIONS = [
   { label: '1/16T', ticks: gridTicks(16, true) },
 ]
 
-export function TrackView({ track }: { track: DrumRackTrack | SlicerTrack }) {
+export function TrackView({ track }: { track: NoteTrack }) {
   const pattern = useProject((p) => (track.activePatternId ? p.patterns[track.activePatternId] : undefined))
   const ts = useProject((p) => p.timeSignature)
   const stepTicks = useApp((s) => s.ui.stepTicks)
-  const editor = useApp((s) => s.ui.trackEditor)
+  const editorPref = useApp((s) => s.ui.trackEditor)
+  // El Sampler es cromático: solo piano roll.
+  const editor = track.kind === 'sampler' ? 'roll' : editorPref
   const setUi = useApp((s) => s.setUi)
   const [strength, setStrength] = useState(1)
   const [selection, setSelection] = useState<Set<NoteId>>(new Set())
@@ -40,7 +44,8 @@ export function TrackView({ track }: { track: DrumRackTrack | SlicerTrack }) {
     <section className="sequencer">
       <header className="editor-head">
         <h2>{track.name}</h2>
-        <span className="meta">{track.kind === 'drumRack' ? 'Drum Rack' : 'Slicer'}</span>
+        <span className="meta">{track.kind === 'drumRack' ? 'Drum Rack' : track.kind === 'slicer' ? 'Slicer' : 'Sampler'}</span>
+        {track.kind !== 'sampler' && (
         <nav className="segmented">
           <button className={editor === 'steps' ? 'active' : ''} onClick={() => setUi({ trackEditor: 'steps' })}>
             Pasos
@@ -49,6 +54,7 @@ export function TrackView({ track }: { track: DrumRackTrack | SlicerTrack }) {
             Piano roll
           </button>
         </nav>
+        )}
         <div className="spacer" />
         <label className="field">
           <span>Largo</span>
@@ -76,6 +82,8 @@ export function TrackView({ track }: { track: DrumRackTrack | SlicerTrack }) {
           <span className="unit">{Math.round(pattern.swing * 100)}%</span>
         </label>
       </header>
+
+      {track.kind === 'sampler' && <SamplerPanel track={track} />}
 
       <div className="toolbar">
         <div className="tool-group">
@@ -114,7 +122,7 @@ export function TrackView({ track }: { track: DrumRackTrack | SlicerTrack }) {
         </div>
       </div>
 
-      {editor === 'steps' ? (
+      {editor === 'steps' && track.kind !== 'sampler' ? (
         <StepGrid track={track} pattern={pattern} />
       ) : (
         <PianoRoll track={track} pattern={pattern} selection={selection} setSelection={setSelection} />

@@ -12,7 +12,7 @@
  *   Z X C V   → pads 1–4
  */
 import { liveNoteOff, liveNoteOn } from '../audio/engineHost'
-import type { Project, SampleRef } from '../model'
+import { noteName, type Project, type SampleRef } from '../model'
 import { selectSlice } from '../state/actions'
 import { getProject, useApp, type UiState } from '../state/store'
 import { lightPad } from './padLights'
@@ -43,6 +43,10 @@ export function padSource(project: Project, ui: UiState): PadSource {
     if (track?.kind === 'drumRack') {
       return { kind: 'track', count: track.pads.length, label: (i) => refLabel(project, track.pads[i]?.sample ?? null) }
     }
+    if (track?.kind === 'sampler') {
+      // Pads cromáticos desde la raíz: el banco A es la primera octava y pico.
+      return { kind: 'track', count: 128 - track.rootNote, label: (i) => noteName(track.rootNote + i) }
+    }
     if (track?.kind === 'slicer') {
       const n = (track.assetId && project.assets[track.assetId]?.slices.length) || 0
       return { kind: 'track', count: n, label: (i) => (i < n ? String(i + 1) : null) }
@@ -57,8 +61,9 @@ export function padSource(project: Project, ui: UiState): PadSource {
 function trackTarget(index: number) {
   const { ui } = useApp.getState()
   const track = ui.selectedTrackId ? getProject().tracks[ui.selectedTrackId] : undefined
-  if (!track || (track.kind !== 'drumRack' && track.kind !== 'slicer')) return null
-  return { trackId: track.id, pitch: track.baseNote + index }
+  if (!track || track.kind === 'audio') return null
+  const base = track.kind === 'sampler' ? track.rootNote : track.baseNote
+  return { trackId: track.id, pitch: base + index }
 }
 
 /** Toca el pad `index` (índice global, ya con el banco aplicado). */

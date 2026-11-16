@@ -806,3 +806,51 @@ button.icon.visible {
 .pad-targets select {
   max-width: 340px;
 }
+
+/* Fase 4: Sampler */
+.track-add {
+  flex-wrap: wrap;
+}
+.sampler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.sampler-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sampler .sample-select {
+  width: 200px;
+}
+.sampler-wave {
+  width: 100%;
+  border-radius: 6px;
+  display: block;
+}
+.roll {
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.roll-scroll {
+  overflow-y: visible;
+}
+.roll-row-black {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #0000002e;
+  pointer-events: none;
+}
+.roll-head.black {
+  background: #1a1a1f;
+}
+.roll-head.root .num {
+  color: var(--accent);
+}

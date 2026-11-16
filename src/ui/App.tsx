@@ -17,8 +17,13 @@ import { TrackView } from './TrackView'
 import { Tracks } from './Tracks'
 import { Transport } from './Transport'
 
+const TEXT_INPUTS = new Set(['text', 'number', 'search', 'email', 'url', 'tel', 'password'])
+
+/** Solo los campos donde se escribe bloquean los atajos; menús, casillas y sliders no. */
 function isTyping(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable || target.tagName === 'TEXTAREA') return true
+  return target instanceof HTMLInputElement && TEXT_INPUTS.has(target.type)
 }
 
 export function App() {
@@ -219,7 +224,7 @@ export function App() {
         </nav>
         {!ready ? (
           <div className="editor empty">Abriendo…</div>
-        ) : view === 'track' && track && (track.kind === 'drumRack' || track.kind === 'slicer') ? (
+        ) : view === 'track' && track && track.kind !== 'audio' ? (
           <TrackView key={track.id} track={track} />
         ) : asset ? (
           <SliceEditor asset={asset} />

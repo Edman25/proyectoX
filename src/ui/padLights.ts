@@ -45,8 +45,8 @@ export function startPadLights(): void {
     const { ui, history } = useApp.getState()
     if (ui.view !== 'track' || event.target.trackId !== ui.selectedTrackId) return
     const track = history.present.tracks[event.target.trackId]
-    if (!track || track.kind === 'audio' || track.kind === 'sampler') return
-    const index = event.target.pitch - track.baseNote
+    if (!track || track.kind === 'audio') return
+    const index = event.target.pitch - (track.kind === 'sampler' ? track.rootNote : track.baseNote)
     lightPad(index, (event.time - getAudioContext().currentTime) * 1000)
   })
 }

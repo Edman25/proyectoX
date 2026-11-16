@@ -9,6 +9,7 @@ import {
   MIN_BPM,
   createDrumRack,
   createPattern,
+  createSamplerTrack,
   createSlicerTrack,
   newId,
   ticksPerBar,
@@ -20,6 +21,7 @@ import {
   type Project,
   type NoteId,
   type SampleRef,
+  type SamplerTrack,
   type SliceId,
   type Track,
   type TrackId,
@@ -303,4 +305,32 @@ export function setControllerDefaultTrack(profileId: ControllerProfileId, trackI
   change('Pista del controlador', (p) => {
     assignmentFor(p, profileId).defaultTrackId = trackId
   })
+}
+
+// --- Sampler ---------------------------------------------------------------
+
+export function addSampler(sample: SampleRef | null, name = 'Sampler'): void {
+  const project = getProject()
+  const rootNote = sample ? (project.assets[sample.assetId]?.rootNote ?? undefined) : undefined
+  addTrack(createSamplerTrack(nextName(name), sample, rootNote), 'Nuevo sampler')
+  useApp.getState().setUi({ trackEditor: 'roll' })
+}
+
+/** Cambia la configuración de un Sampler. `label` agrupa el paso de deshacer. */
+export function updateSampler(id: TrackId, label: string, patch: (t: Draft<SamplerTrack>) => void): void {
+  change(label, (p) => {
+    const t = p.tracks[id]
+    if (t?.kind === 'sampler') patch(t)
+  })
+}
+
+/** Sampler con lo seleccionado: el slice elegido, o el sample completo. */
+export function addSamplerFromSelection(): void {
+  const { ui } = useApp.getState()
+  const asset = ui.selectedAssetId ? getProject().assets[ui.selectedAssetId] : undefined
+  if (!asset) return addSampler(null)
+  const sliceId = ui.selectedSliceIds.length === 1 ? ui.selectedSliceIds[0] : undefined
+  const index = sliceId ? asset.slices.findIndex((s) => s.id === sliceId) : -1
+  if (sliceId && index >= 0) addSampler({ kind: 'slice', assetId: asset.id, sliceId }, `${asset.name} ${index + 1}`)
+  else addSampler({ kind: 'asset', assetId: asset.id }, asset.name)
 }

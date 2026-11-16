@@ -10,10 +10,10 @@
  */
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { liveNoteOff, liveNoteOn } from '../audio/engineHost'
-import { PPQ, type DrumRackTrack, type Note, type NoteId, type Pattern, type SlicerTrack } from '../model'
+import { PPQ, type Note, type NoteId, type Pattern } from '../model'
 import { useApp, useProject } from '../state/store'
 import { addNote, deleteNotes, editNotes, type NoteEdit } from '../state/trackActions'
-import { rowsFor } from './rows'
+import { rowsFor, type NoteTrack } from './rows'
 import { usePlayhead } from './transport'
 
 const ROW_H = 24
@@ -37,7 +37,7 @@ export function PianoRoll({
   selection,
   setSelection,
 }: {
-  track: DrumRackTrack | SlicerTrack
+  track: NoteTrack
   pattern: Pattern
   selection: ReadonlySet<NoteId>
   setSelection: (s: Set<NoteId>) => void
@@ -45,6 +45,7 @@ export function PianoRoll({
   const project = useProject((p) => p)
   const stepTicks = useApp((s) => s.ui.stepTicks)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const rollRef = useRef<HTMLDivElement>(null)
   const [wrapW, setWrapW] = useState(800)
   const [drag, setDrag] = useState<Drag | null>(null)
 
@@ -57,8 +58,20 @@ export function PianoRoll({
   }, [])
 
   const length = pattern.lengthTicks
-  const rows = rowsFor(project, track)
+  const rows = rowsFor(project, track, pattern)
   const rowOf = new Map(rows.map((r, i) => [r.pitch, i]))
+
+  // Al abrir un Sampler, mostrar la zona de la raíz (o la nota más aguda grabada).
+  const isSampler = track.kind === 'sampler'
+  useLayoutEffect(() => {
+    const el = rollRef.current
+    if (!el || !isSampler) return
+    const top = Math.max(track.kind === 'sampler' ? track.rootNote + 7 : 0, ...pattern.notes.map((n) => n.pitch))
+    const i = rows.findIndex((r) => r.pitch <= top)
+    el.scrollTop = Math.max(0, (i - 2) * ROW_H)
+    // Solo al cambiar de pista.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track.id])
   const stepPx = Math.max(MIN_STEP_PX, (wrapW - HEAD_W - 16) / Math.max(1, length / stepTicks))
   const pxPerTick = stepPx / stepTicks
   const width = length * pxPerTick
@@ -160,12 +173,12 @@ export function PianoRoll({
 
   return (
     <div className="roll-wrap" ref={wrapRef}>
-      <div className="roll" tabIndex={0} onKeyDown={onKeyDown}>
+      <div className="roll" ref={rollRef} tabIndex={0} onKeyDown={onKeyDown}>
         <div className="roll-heads" style={{ width: HEAD_W }}>
           {rows.map((r) => (
             <button
               key={r.pitch}
-              className="roll-head"
+              className={`roll-head ${r.black ? 'black' : ''} ${track.kind === 'sampler' && r.pitch === track.rootNote ? 'root' : ''}`}
               style={{ height: ROW_H }}
               title={r.label}
               onPointerDown={(e) => liveNoteOn({ trackId: track.id, pitch: r.pitch }, 100, e.timeStamp)}
@@ -189,6 +202,9 @@ export function PianoRoll({
             }}
             onDoubleClick={onDoubleClick}
           >
+            {rows.map((r, i) =>
+              r.black ? <div key={r.pitch} className="roll-row-black" style={{ top: i * ROW_H, height: ROW_H }} /> : null,
+            )}
             {pattern.notes.map((n) => {
               const s = shown(n)
               if (!s || n.tick >= length) return null

@@ -8,6 +8,8 @@ import {
   type Pattern,
   type PlaybackOptions,
   type Project,
+  type SampleRef,
+  type SamplerTrack,
   type SlicerTrack,
 } from './project'
 import { gridTicks, ticksPerBar, type TimeSignature } from './time'
@@ -77,6 +79,30 @@ export function createSlicerTrack(name: string, assetId: AssetId | null): Slicer
     baseNote: DEFAULT_PAD_BASE_NOTE,
     triggerMode: 'oneShot',
     monophonic: false,
+  }
+}
+
+/** C3 en la convención donde 60 = C4: raíz por defecto del Sampler. */
+export const DEFAULT_ROOT_NOTE = 48
+
+export function createSamplerTrack(name: string, sample: SampleRef | null, rootNote = DEFAULT_ROOT_NOTE): SamplerTrack {
+  return {
+    id: newId<TrackId>(),
+    kind: 'sampler',
+    name,
+    color: '#9b7cf0',
+    mixer: { ...DEFAULT_MIXER },
+    armed: false,
+    activePatternId: null,
+    sample,
+    rootNote,
+    pitchMode: 'resample',
+    playback: { ...DEFAULT_PLAYBACK },
+    envelope: { ...DEFAULT_ENVELOPE },
+    loop: { enabled: false, start: 0, end: 0 },
+    voiceMode: 'poly',
+    maxVoices: 16,
+    glideMs: 0,
   }
 }
 

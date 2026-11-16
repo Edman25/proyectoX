@@ -1,6 +1,6 @@
 # Plan — App de chops, samples y secuenciación
 
-Estado: fases 0–3 listas. Siguiente: fase 4 (Sampler).
+Estado: fases 0–4 listas. Siguiente: fase 5 (tempo y tono con Signalsmith).
 
 ## Objetivo
 
