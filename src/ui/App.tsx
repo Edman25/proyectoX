@@ -13,6 +13,8 @@ import { PAD_KEYS, PADS_PER_BANK, padDown, padUp } from './pads'
 import { isPreviewPlaying, previewFrom, stopAll } from './preview'
 import { SliceEditor } from './SliceEditor'
 import { Arrangement } from './Arrangement'
+import { Mixer } from './Mixer'
+import { ProjectMenu } from './ProjectMenu'
 import { ChopStrip } from './ChopStrip'
 import { ControllerPanel } from './ControllerPanel'
 import { TrackView } from './TrackView'
@@ -195,12 +197,18 @@ export function App() {
     <div className="app" onPointerDown={resumeAudio}>
       <header className="topbar">
         <h1>proyectoX</h1>
+        <ProjectMenu
+          notify={(m) => {
+            setNotice(m)
+            window.setTimeout(() => setNotice((cur) => (cur === m ? null : cur)), 5000)
+          }}
+        />
         <Transport onOpenController={() => setControllerOpen(true)} />
         <button disabled={!canUndo} title={canUndo ? `Deshacer: ${canUndo} (Ctrl/Cmd+Z)` : 'Nada que deshacer'} onClick={undo}>
-          ↶ Deshacer
+          ↶
         </button>
         <button disabled={!canRedo} title={canRedo ? `Rehacer: ${canRedo} (Ctrl/Cmd+Shift+Z)` : 'Nada que rehacer'} onClick={redo}>
-          ↷ Rehacer
+          ↷
         </button>
         <div className="spacer" />
         {notice && <span className="notice">{notice}</span>}
@@ -226,11 +234,16 @@ export function App() {
           <button className={view === 'arrange' ? 'active' : ''} onClick={() => setUi({ view: 'arrange' })}>
             Arreglo
           </button>
+          <button className={view === 'mixer' ? 'active' : ''} onClick={() => setUi({ view: 'mixer' })}>
+            Mixer
+          </button>
         </nav>
         {!ready ? (
           <div className="editor empty">Abriendo…</div>
         ) : view === 'arrange' ? (
           <Arrangement />
+        ) : view === 'mixer' ? (
+          <Mixer />
         ) : view === 'track' && track && track.kind !== 'audio' ? (
           <TrackView key={track.id} track={track} />
         ) : asset ? (

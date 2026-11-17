@@ -9,6 +9,7 @@ import {
   type PlaybackOptions,
   type Project,
   type AudioTrack,
+  type ChannelFx,
   type SampleRef,
   type SamplerTrack,
   type SlicerTrack,
@@ -31,6 +32,14 @@ export const DEFAULT_ENVELOPE: Readonly<Envelope> = {
   decayMs: 0,
   sustain: 1,
   releaseMs: 30,
+}
+
+export function defaultFx(): ChannelFx {
+  return {
+    filter: { enabled: false, type: 'lowpass', cutoffHz: 18000, q: 0.7 },
+    delay: { enabled: false, timeTicks: 720, feedback: 0.35, mix: 0.3 },
+    reverb: { enabled: false, sizeSec: 2, mix: 0.25 },
+  }
 }
 
 export const DEFAULT_MIXER: Readonly<MixerChannel> = {
@@ -149,6 +158,6 @@ export function createEmptyProject(name = 'Sin título'): Project {
     patterns: {},
     clips: {},
     controllers: [],
-    master: { volumeDb: 0 },
+    master: { volumeDb: 0, limiter: true },
   }
 }

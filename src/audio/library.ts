@@ -127,3 +127,9 @@ export async function createAsset(
     slices: [],
   }
 }
+
+/** Guarda y registra el audio de un asset que ya tiene id (al abrir un proyecto). */
+export async function storeAssetAudio(asset: SampleAsset, sampleRate: number, channels: Float32Array<ArrayBuffer>[]): Promise<void> {
+  await dbPut('audio', asset.storageKey, { sampleRate, channels } satisfies StoredAudio)
+  register(asset.id, toBuffer({ sampleRate, channels }))
+}

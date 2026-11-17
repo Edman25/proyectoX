@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { commit, createHistory, redo, undo } from './history'
+import { commit, commitMerged, createHistory, redo, undo } from './history'
 
 describe('history', () => {
   it('deshace y rehace', () => {
@@ -48,5 +48,20 @@ describe('history', () => {
       d.a.x = 2
     })
     expect(h.present.b).toBe(b)
+  })
+
+  it('cambios seguidos con la misma clave se funden en un paso', () => {
+    let h = createHistory({ vol: 0, pan: 0 })
+    h = commitMerged(h, 'Perilla', 'k1', (d) => void (d.vol = 1), 1000)
+    h = commitMerged(h, 'Perilla', 'k1', (d) => void (d.vol = 2), 1500)
+    h = commitMerged(h, 'Perilla', 'k1', (d) => void (d.vol = 3), 2000)
+    expect(h.past).toHaveLength(1)
+    h = commitMerged(h, 'Perilla', 'k2', (d) => void (d.pan = 1), 2100)
+    h = commitMerged(h, 'Perilla', 'k1', (d) => void (d.vol = 9), 9000) // pasó la ventana
+    expect(h.past).toHaveLength(3)
+    h = undo(undo(h))
+    expect(h.present).toEqual({ vol: 3, pan: 0 })
+    h = undo(h)
+    expect(h.present).toEqual({ vol: 0, pan: 0 })
   })
 })

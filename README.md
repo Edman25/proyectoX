@@ -52,3 +52,10 @@ npm run check    # typecheck + lint + tests
 Sin aprender nada, el controlador funciona como teclado: la nota MIDI 36 es el pad 1, 37 el pad 2, etc.
 
 En desarrollo hay un controlador simulado en la consola: `const c = __px.fakeController('Prueba'); c.down(36); c.up(36)`.
+
+## Proyectos y export
+
+- El proyecto se autoguarda en el navegador. Para llevártelo o respaldarlo: **Proyecto ▾ → Guardar** descarga un `.pxproj.zip` con todo el audio (WAV sin pérdida). **Abrir** lo recupera en cualquier compu.
+- **Proyecto ▾ → Exportar a WAV**: la mezcla o una pista por archivo (stems), a 44.1/48 kHz y 16/24/32 bits. En modo canción exporta el arreglo; en modo patrón, los compases que elijas. Sin metrónomo.
+- **Mixer**: por pista, filtro (pasa bajos/altos), delay sincronizado y reverb como envíos; volumen, paneo, mute/solo. En el master, una protección que satura suave en vez de recortar (sin latencia).
+- **Perillas MIDI**: en el panel del controlador, **Aprender perillas** y asigna cada una a volumen, paneo, filtro o envíos. Girar una perilla cuenta como un solo paso de deshacer.

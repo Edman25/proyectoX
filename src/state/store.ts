@@ -5,7 +5,7 @@
 import type { Draft } from 'immer'
 import { create } from 'zustand'
 import { createEmptyProject, type AssetId, type ClipId, type Project, type SampleRef, type SliceId, type TrackId } from '../model'
-import { commit, createHistory, redo, reset, undo, type History } from './history'
+import { commit, commitMerged, createHistory, redo, reset, undo, type History } from './history'
 
 export interface UiState {
   selectedAssetId: AssetId | null
@@ -17,7 +17,7 @@ export interface UiState {
   padBank: number
   selectedTrackId: TrackId | null
   /** Qué se ve al centro: el editor de slices, el de la pista o el arreglo. */
-  view: 'sample' | 'track' | 'arrange'
+  view: 'sample' | 'track' | 'arrange' | 'mixer'
   /** Resolución de la grilla de pasos, en ticks. */
   stepTicks: number
   /** Editor de la pista: grilla de pasos o piano roll. */
@@ -50,6 +50,8 @@ interface AppState {
   change(label: string, recipe: (draft: Draft<Project>) => void): void
   undo(): void
   redo(): void
+  /** Como `change`, pero los cambios seguidos con la misma clave se funden en un paso (perillas). */
+  changeMerged(label: string, mergeKey: string, recipe: (draft: Draft<Project>) => void): void
   /**
    * Reemplaza el proyecto por uno calculado fuera (funciones puras como
    * applyTake) como un paso de deshacer. Solo copia las partes que cambiaron.
@@ -73,6 +75,7 @@ export const useApp = create<AppState>()((set) => ({
         }
       }),
     })),
+  changeMerged: (label, key, recipe) => set((s) => ({ history: commitMerged(s.history, label, key, recipe) })),
   undo: () => set((s) => ({ history: undo(s.history) })),
   redo: () => set((s) => ({ history: redo(s.history) })),
   load: (project) =>

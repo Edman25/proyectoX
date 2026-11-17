@@ -1041,3 +1041,100 @@ button.icon.visible {
   background: none;
   font-size: 12px;
 }
+
+/* Fase 7: mixer y proyecto */
+.project-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 10px;
+}
+button.project-name {
+  background: none;
+  border-color: transparent;
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mixer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.strips {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  align-items: stretch;
+}
+.strip-ch {
+  flex: none;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.strip-ch.master {
+  border-color: var(--accent);
+}
+.strip-ch header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.strip-ch header strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+.strip-ch .fx {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 6px;
+  background: var(--bg);
+  opacity: 0.7;
+}
+.strip-ch .fx.on {
+  opacity: 1;
+  outline: 1px solid var(--accent-dim);
+}
+.fx-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fx-row .muted {
+  min-width: 52px;
+}
+.strip-ch .vol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.strip-ch .vol .fader {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  height: 140px;
+  width: 28px;
+  min-width: 0;
+}
+.ms-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.project-menu select {
+  width: 104px;
+}

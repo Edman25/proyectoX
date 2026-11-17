@@ -100,6 +100,8 @@ export class ProjectBuilder {
     this.ctx = ctx
     this.project = { ...createEmptyProject('test'), bpm }
     this.project.metronome = { ...this.project.metronome, enabled: false, countInBars: 0 }
+    // Los tests miden el motor tal cual: sin la protección del master.
+    this.project.master = { ...this.project.master, limiter: false }
   }
 
   asset(buffer: AudioBuffer, sliceBounds: [number, number][] = []): SampleAsset {

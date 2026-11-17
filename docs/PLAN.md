@@ -1,6 +1,6 @@
 # Plan — App de chops, samples y secuenciación
 
-Estado: fases 0–6 listas. Siguiente: fase 7 (mixer, export y proyectos).
+Estado: fases 0–7 listas (flujo completo). Siguiente: probar con hardware y material real; fase 8 (extras) a demanda.
 
 ## Objetivo
 

@@ -11,7 +11,12 @@ export interface HistoryEntry {
   label: string
   patches: Patch[]
   inverse: Patch[]
+  /** Si dos cambios seguidos tienen la misma clave (y llegan pronto), se funden en un paso. */
+  mergeKey?: string
+  at?: number
 }
+
+export const MERGE_WINDOW_MS = 1500
 
 export interface History<T> {
   present: T
@@ -29,6 +34,29 @@ export function commit<T extends object>(h: History<T>, label: string, recipe: (
   const [next, patches, inverse] = produceWithPatches(h.present, recipe)
   if (patches.length === 0) return h
   const past = [...h.past, { label, patches, inverse }]
+  if (past.length > HISTORY_LIMIT) past.shift()
+  return { present: next, past, future: [] }
+}
+
+/**
+ * Como `commit`, pero si el último paso tiene la misma `mergeKey` y es
+ * reciente, lo extiende en vez de crear otro (girar una perilla = un paso).
+ */
+export function commitMerged<T extends object>(
+  h: History<T>,
+  label: string,
+  mergeKey: string,
+  recipe: (draft: Draft<T>) => void,
+  now = Date.now(),
+): History<T> {
+  const last = h.past.at(-1)
+  const [next, patches, inverse] = produceWithPatches(h.present, recipe)
+  if (patches.length === 0) return h
+  if (last && last.mergeKey === mergeKey && last.at !== undefined && now - last.at < MERGE_WINDOW_MS && h.future.length === 0) {
+    const merged = { label, patches: [...last.patches, ...patches], inverse: [...inverse, ...last.inverse], mergeKey, at: now }
+    return { present: next, past: [...h.past.slice(0, -1), merged], future: [] }
+  }
+  const past = [...h.past, { label, patches, inverse, mergeKey, at: now }]
   if (past.length > HISTORY_LIMIT) past.shift()
   return { present: next, past, future: [] }
 }

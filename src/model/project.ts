@@ -87,12 +87,25 @@ export type SampleRef =
 // Pistas
 // ---------------------------------------------------------------------------
 
+/**
+ * Efectos del canal, en este orden: filtro (inserto) → paneo → envíos a
+ * delay y reverb (se suman a la señal seca). Opcional: sin `fx`, no hay efectos.
+ */
+export interface ChannelFx {
+  filter: { enabled: boolean; type: 'lowpass' | 'highpass'; cutoffHz: number; q: number }
+  /** Delay sincronizado al tempo. `mix` es el nivel del envío (0–1). */
+  delay: { enabled: boolean; timeTicks: Ticks; feedback: number; mix: number }
+  /** Reverb con respuesta generada de `sizeSec` de cola. */
+  reverb: { enabled: boolean; sizeSec: number; mix: number }
+}
+
 export interface MixerChannel {
   volumeDb: number
   /** -1 (izquierda) a 1 (derecha). */
   pan: number
   mute: boolean
   solo: boolean
+  fx?: ChannelFx
 }
 
 /** one-shot: suena completo aunque sueltes. gate: se corta (con release) al soltar. */
@@ -260,7 +273,14 @@ export interface ControllerAssignment {
   padTargets: Partial<Record<ControlId, NoteTarget>>
   /** A dónde van las teclas (y pads sin destino). null = pista seleccionada. */
   defaultTrackId: TrackId | null
+  /** Perillas/faders → parámetro (MIDI learn, solo control en vivo). */
+  knobTargets?: Partial<Record<ControlId, ParamTarget>>
 }
+
+/** Parámetro que puede mover una perilla. `trackId` null = master. */
+export type ParamTarget =
+  | { param: 'volume' | 'pan'; trackId: TrackId | null }
+  | { param: 'filterCutoff' | 'delayMix' | 'reverbMix'; trackId: TrackId }
 
 // ---------------------------------------------------------------------------
 // Proyecto
@@ -304,5 +324,6 @@ export interface Project {
   patterns: Record<PatternId, Pattern>
   clips: Record<ClipId, ArrangementClip>
   controllers: ControllerAssignment[]
-  master: { volumeDb: number }
+  /** `limiter`: limitador al final para que la mezcla no sature (por defecto, activo). */
+  master: { volumeDb: number; limiter?: boolean }
 }

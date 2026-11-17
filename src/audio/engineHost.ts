@@ -24,6 +24,7 @@ import {
   type WebMidiSource,
 } from '../midi'
 import type { NoteTarget, TrackId } from '../model'
+import { applyKnob } from '../state/mixerActions'
 import { useSettings } from '../state/settings'
 import { useApp } from '../state/store'
 import { getAudioContext, resumeAudio } from './context'
@@ -100,6 +101,11 @@ function getHost(): Host {
     getProfiles: () => useSettings.getState().profiles,
     getSelectedTrackId: () => useApp.getState().ui.selectedTrackId,
     onEvent: (event) => session.input(event),
+    onControl: ({ profileId, controlId, value }) => {
+      const a = useApp.getState().history.present.controllers.find((c) => c.profileId === profileId)
+      const target = a?.knobTargets?.[controlId]
+      if (target) applyKnob(target, controlId, value)
+    },
     onTransport: (action, pressed) => {
       resumeAudio()
       if (action === 'record' && pressed) startOrStopRecording()

@@ -11,9 +11,10 @@
 import { useEffect, useState } from 'react'
 import { connectMidi, getMidiSource, useLive } from '../audio/engineHost'
 import { addControl, learnNext } from '../midi'
-import type { ControllerProfile, NoteTarget, Project, TrackId, TransportAction } from '../model'
+import type { ControllerProfile, NoteTarget, ParamTarget, Project, TrackId, TransportAction } from '../model'
 import { ensureProfile, setLatencyMs, updateProfile, useSettings } from '../state/settings'
 import { useProject } from '../state/store'
+import { setKnobTarget } from '../state/mixerActions'
 import { setControllerDefaultTrack, setPadTarget } from '../state/trackActions'
 import { NumberField } from './NumberField'
 import { refLabel } from './pads'
@@ -25,7 +26,7 @@ const ACTIONS: { action: TransportAction; label: string }[] = [
   { action: 'noteRepeat', label: 'Note repeat (mantener)' },
 ]
 
-type Learning = { deviceName: string; what: 'pads' } | { deviceName: string; what: TransportAction } | null
+type Learning = { deviceName: string; what: 'pads' | 'knobs' } | { deviceName: string; what: TransportAction } | null
 
 function targetOptions(project: Project): { value: string; label: string }[] {
   const out: { value: string; label: string }[] = []
@@ -43,11 +44,36 @@ function targetOptions(project: Project): { value: string; label: string }[] {
   return out
 }
 
+const PARAM_LABEL = { volume: 'volumen', pan: 'paneo', filterCutoff: 'corte del filtro', delayMix: 'envío al delay', reverbMix: 'envío a la reverb' } as const
+
+function encodeParam(t: ParamTarget): string {
+  return `${t.param}|${t.trackId ?? 'master'}`
+}
+
+function decodeParam(v: string): ParamTarget {
+  const [param, track] = v.split('|') as [ParamTarget['param'], string]
+  if (track === 'master') return { param: 'volume', trackId: null }
+  return { param, trackId: track as TrackId } as ParamTarget
+}
+
+function paramOptions(project: Project): { value: string; label: string }[] {
+  const out = [{ value: 'volume|master', label: 'Master · volumen' }]
+  for (const id of project.trackOrder) {
+    const t = project.tracks[id]
+    if (!t) continue
+    for (const param of ['volume', 'pan', 'filterCutoff', 'delayMix', 'reverbMix'] as const) {
+      out.push({ value: `${param}|${id}`, label: `${t.name} · ${PARAM_LABEL[param]}` })
+    }
+  }
+  return out
+}
+
 function DeviceSection({ deviceName, learning, setLearning }: { deviceName: string; learning: Learning; setLearning: (l: Learning) => void }) {
   const profile = useSettings((s) => s.profiles.find((p) => p.deviceName === deviceName))
   const project = useProject((p) => p)
   const assignment = profile ? project.controllers.find((a) => a.profileId === profile.id) : undefined
   const pads = profile?.controls.filter((c) => c.kind === 'pad') ?? []
+  const knobs = profile?.controls.filter((c) => c.kind === 'knob' || c.kind === 'fader') ?? []
   const options = targetOptions(project)
   const isLearning = learning?.deviceName === deviceName
 
@@ -120,6 +146,58 @@ function DeviceSection({ deviceName, learning, setLearning }: { deviceName: stri
             )}
           </div>
         ))}
+      </div>
+
+      <div className="device-block">
+        <div className="row">
+          <strong>Perillas y faders</strong>
+          <span className="muted small">{knobs.length ? `${knobs.length} aprendidas` : 'Mueve una perilla para que controle volumen, paneo o efectos.'}</span>
+          <div className="spacer" />
+          {isLearning && learning.what === 'knobs' ? (
+            <button className="active" onClick={() => setLearning(null)}>
+              Listo
+            </button>
+          ) : (
+            <button onClick={() => setLearning({ deviceName, what: 'knobs' })}>Aprender perillas</button>
+          )}
+        </div>
+        {isLearning && learning.what === 'knobs' && <p className="learn-hint">Mueve las perillas o faders que quieras usar, una por una.</p>}
+        {profile && knobs.length > 0 && (
+          <table className="pad-targets">
+            <tbody>
+              {knobs.map((c) => {
+                const t = assignment?.knobTargets?.[c.id]
+                return (
+                  <tr key={c.id}>
+                    <td className="muted small">{c.label}</td>
+                    <td>
+                      <select
+                        value={t ? encodeParam(t) : ''}
+                        onChange={(e) => setKnobTarget(profile.id, c.id, e.target.value ? decodeParam(e.target.value) : null)}
+                      >
+                        <option value="">— sin asignar —</option>
+                        {paramOptions(project).map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <button
+                        className="icon visible"
+                        title="Olvidar esta perilla"
+                        onClick={() => updateProfile(profile.id, (p) => ({ ...p, controls: p.controls.filter((x) => x.id !== c.id) }))}
+                      >
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {profile && (
@@ -212,10 +290,10 @@ export function ControllerPanel({ onClose }: { onClose: () => void }) {
         for (;;) {
           if (abort.signal.aborted) return
           const profile = ensureProfile(current.deviceName)
-          const isPads = current.what === 'pads'
+          const isPads = current.what === 'pads' || current.what === 'knobs'
           // Sin etiqueta: learn la pone con el mensaje ("Nota 36 (canal 10)"), que es lo útil de ver.
           const { control } = await learnNext(source, {
-            kind: isPads ? 'pad' : 'button',
+            kind: current.what === 'pads' ? 'pad' : current.what === 'knobs' ? 'knob' : 'button',
             deviceName: current.deviceName,
             signal: abort.signal,
           })
